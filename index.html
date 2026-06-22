@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYS://ACCESS_TERMINAL</title>
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00aa2b;
+    --green-faint: #003d10;
+    --bg: #050a05;
+    --amber: #ffb000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Courier New', Courier, monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 2px,
+      rgba(0, 0, 0, 0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 60%,
+      rgba(0,0,0,0.6) 100%
+    );
+    pointer-events: none;
+    z-index: 99;
+  }
+
+  .terminal {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+    position: relative;
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--green-dim);
+    padding-bottom: 0.75rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .sys-id {
+    font-size: 0.7rem;
+    color: var(--green-dim);
+    letter-spacing: 0.15em;
+  }
+
+  .header-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: var(--green);
+  }
+
+  /* Boot output */
+  #boot-log {
+    font-size: 0.82rem;
+    line-height: 1.9;
+    color: var(--green-dim);
+    min-height: 12rem;
+    letter-spacing: 0.04em;
+  }
+
+  #boot-log .line { display: block; }
+  #boot-log .ok    { color: var(--green); }
+  #boot-log .warn  { color: var(--amber); }
+  #boot-log .grant { color: var(--green); font-weight: bold; letter-spacing: 0.15em; }
+
+  /* Cursor */
+  .cursor {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.1em;
+    background: var(--green);
+    vertical-align: text-bottom;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* Directory */
+  #directory {
+    display: none;
+    margin-top: 2.5rem;
+  }
+
+  .dir-header {
+    font-size: 0.7rem;
+    color: var(--green-dim);
+    letter-spacing: 0.2em;
+    margin-bottom: 1.25rem;
+    border-top: 1px solid var(--green-faint);
+    padding-top: 1.25rem;
+  }
+
+  .link-entry {
+    display: block;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    margin-bottom: 0.25rem;
+  }
+
+  .link-entry.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .link-entry a {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.7rem 0.9rem;
+    text-decoration: none;
+    color: var(--green);
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .link-entry a:hover {
+    border-color: var(--green-dim);
+    background: rgba(0, 255, 65, 0.05);
+    animation: glitch 0.25s steps(2) forwards;
+  }
+
+  .link-entry a:hover .link-id {
+    color: var(--amber);
+    text-shadow: 0 0 8px var(--amber);
+  }
+
+  @keyframes glitch {
+    0%   { clip-path: inset(0 0 95% 0); transform: translateX(2px); }
+    25%  { clip-path: inset(40% 0 40% 0); transform: translateX(-2px); }
+    50%  { clip-path: inset(80% 0 5% 0); transform: translateX(1px); }
+    75%  { clip-path: none; transform: translateX(0); }
+    100% { clip-path: none; transform: translateX(0); }
+  }
+
+  .link-id {
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: color 0.15s, text-shadow 0.15s;
+    min-width: 180px;
+  }
+
+  .link-desc {
+    font-size: 0.75rem;
+    color: var(--green-dim);
+    letter-spacing: 0.04em;
+    flex: 1;
+  }
+
+  .link-arrow {
+    font-size: 0.75rem;
+    color: var(--green-faint);
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+
+  .link-entry a:hover .link-arrow {
+    opacity: 1;
+    color: var(--green-dim);
+  }
+
+  /* Prompt line at bottom */
+  .prompt-line {
+    margin-top: 2.5rem;
+    font-size: 0.8rem;
+    color: var(--green-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* Warning badge */
+  .warning-badge {
+    position: fixed;
+    bottom: 1rem;
+    right: 1.2rem;
+    font-size: 0.58rem;
+    color: rgba(0, 170, 43, 0.35);
+    letter-spacing: 0.12em;
+    text-align: right;
+    line-height: 1.6;
+    z-index: 98;
+    pointer-events: none;
+  }
+
+  /* Decryption reveal animation for link text */
+  .decrypt {
+    display: inline-block;
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .terminal { padding: 2rem 1.2rem 3rem; }
+    .link-id  { min-width: 0; font-size: 0.82rem; }
+    .link-desc { font-size: 0.7rem; }
+    .link-entry a { flex-wrap: wrap; gap: 0.4rem; }
+    .header { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="terminal">
+
+  <div class="header">
+    <span class="header-title">SYS://VISUAL_LAB/ACCESS_TERMINAL</span>
+    <span class="sys-id" id="sys-id">NODE: 0x00 — <span id="ts"></span></span>
+  </div>
+
+  <div id="boot-log"><span class="cursor"></span></div>
+
+  <div id="directory">
+    <div class="dir-header">// CLASSIFIED FILE DIRECTORY — <span id="file-count">0</span> ENTRIES FOUND</div>
+
+    <div class="link-entry" id="entry-0">
+      <a href="#" target="_blank" rel="noopener">
+        <span class="link-id decrypt" data-text="[EDGE_DETECT_3D]">[EDGE_DETECT_3D]</span>
+        <span class="link-desc">Camera edge detection → 3D particle visualization</span>
+        <span class="link-arrow">▶</span>
+      </a>
+    </div>
+
+    <div class="link-entry" id="entry-1">
+      <a href="#" target="_blank" rel="noopener">
+        <span class="link-id decrypt" data-text="[PROJECT_002]">[PROJECT_002]</span>
+        <span class="link-desc">— placeholder —</span>
+        <span class="link-arrow">▶</span>
+      </a>
+    </div>
+
+    <div class="link-entry" id="entry-2">
+      <a href="#" target="_blank" rel="noopener">
+        <span class="link-id decrypt" data-text="[PROJECT_003]">[PROJECT_003]</span>
+        <span class="link-desc">— placeholder —</span>
+        <span class="link-arrow">▶</span>
+      </a>
+    </div>
+
+    <div class="prompt-line">
+      <span style="color:var(--green)">root@lab</span><span style="color:var(--green-dim)">:~#</span>
+      <span class="cursor"></span>
+    </div>
+  </div>
+
+</div>
+
+<div class="warning-badge">
+  ⚠ UNAUTHORIZED ACCESS WILL BE PROSECUTED<br>
+  ALL ACTIVITY IS MONITORED AND LOGGED<br>
+  PGP:0xDEAD.BEEF.C0DE
+</div>
+
+<script>
+  // Timestamp
+  const ts = document.getElementById('ts');
+  function updateTs() {
+    const now = new Date();
+    ts.textContent = now.toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+  }
+  updateTs();
+  setInterval(updateTs, 1000);
+
+  // Boot sequence
+  const bootLog = document.getElementById('boot-log');
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*<>/\\|';
+
+  const bootLines = [
+    { text: 'BIOS v4.2.0 — POST OK',                   cls: '',     delay: 0   },
+    { text: 'INITIALIZING KERNEL MODULES...',           cls: '',     delay: 320 },
+    { text: 'CPU: CORTEX-X4 @ 4.2GHz  [OK]',           cls: 'ok',   delay: 160 },
+    { text: 'MEM: 65536K DETECTED      [OK]',           cls: 'ok',   delay: 120 },
+    { text: 'NET: INTERFACE ETH0 UP    [OK]',           cls: 'ok',   delay: 120 },
+    { text: 'LOADING ENCRYPTION LAYER...',              cls: '',     delay: 200 },
+    { text: 'AES-256-GCM CIPHER READY  [OK]',          cls: 'ok',   delay: 300 },
+    { text: 'MOUNTING SECURE FILESYSTEM...',            cls: '',     delay: 180 },
+    { text: '>>> WARNING: CLASSIFIED PARTITION FOUND', cls: 'warn', delay: 240 },
+    { text: 'VERIFYING CREDENTIALS...',                cls: '',     delay: 400 },
+    { text: '..............................',           cls: '',     delay: 600 },
+    { text: '[ ACCESS GRANTED ]',                      cls: 'grant',delay: 100 },
+    { text: 'DECRYPTING FILE INDEX...',                cls: '',     delay: 300 },
+  ];
+
+  let logCursor = bootLog.querySelector('.cursor');
+
+  function appendLine(text, cls) {
+    return new Promise(resolve => {
+      // Remove cursor from last position
+      if (logCursor) logCursor.remove();
+
+      const span = document.createElement('span');
+      span.className = 'line' + (cls ? ' ' + cls : '');
+      bootLog.appendChild(span);
+
+      // Add cursor after new line
+      logCursor = document.createElement('span');
+      logCursor.className = 'cursor';
+      bootLog.appendChild(logCursor);
+
+      let i = 0;
+      const typeChar = () => {
+        if (i <= text.length) {
+          span.textContent = text.slice(0, i);
+          i++;
+          setTimeout(typeChar, 18 + Math.random() * 14);
+        } else {
+          resolve();
+        }
+      };
+      typeChar();
+    });
+  }
+
+  async function runBoot() {
+    for (const line of bootLines) {
+      await new Promise(r => setTimeout(r, line.delay));
+      await appendLine(line.text, line.cls);
+    }
+
+    // Small pause then reveal directory
+    await new Promise(r => setTimeout(r, 500));
+    if (logCursor) logCursor.remove();
+
+    showDirectory();
+  }
+
+  // Decrypt reveal effect for link text
+  function decryptText(el, finalText, duration) {
+    const frames = Math.round(duration / 40);
+    let frame = 0;
+    const interval = setInterval(() => {
+      const progress = frame / frames;
+      const revealedChars = Math.floor(progress * finalText.length);
+      let display = finalText.slice(0, revealedChars);
+      for (let i = revealedChars; i < finalText.length; i++) {
+        display += finalText[i] === ' ' ? ' ' : CHARS[Math.floor(Math.random() * CHARS.length)];
+      }
+      el.textContent = display;
+      frame++;
+      if (frame > frames) {
+        el.textContent = finalText;
+        clearInterval(interval);
+      }
+    }, 40);
+  }
+
+  function showDirectory() {
+    const dir = document.getElementById('directory');
+    dir.style.display = 'block';
+
+    const entries = dir.querySelectorAll('.link-entry');
+    const count = document.getElementById('file-count');
+    count.textContent = entries.length;
+
+    entries.forEach((entry, i) => {
+      setTimeout(() => {
+        entry.classList.add('visible');
+        const decryptEl = entry.querySelector('.decrypt');
+        if (decryptEl) {
+          decryptText(decryptEl, decryptEl.dataset.text, 500);
+        }
+      }, i * 260);
+    });
+  }
+
+  runBoot();
+</script>
+</body>
+</html>
