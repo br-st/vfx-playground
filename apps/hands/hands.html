@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<!--
+    Hand Tracking Particle Emitter — Fluid Edition
+    Built with Claude.ai
+    MediaPipe Hands + Curl Noise Fluid Dynamics + Blob Tracker
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hand Fluid Particles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg:#0b0b0b; --panel:rgba(12,12,12,0.96); --text:#e5e5e5; --muted:#666;
+    --accent:#d4d4d4; --track:#2a2a2a; --thumb:#cfcfcf;
+    --act-bg:#e5e5e5; --act-txt:#0b0b0b;
+}
+*{box-sizing:border-box;}
+body{margin:0;padding:0;background:var(--bg);font-family:'Manrope','Helvetica Neue',sans-serif;overflow:hidden;color:var(--text);-webkit-font-smoothing:antialiased;}
+#cv{display:block;position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;}
+#ui{position:absolute;top:24px;left:24px;width:290px;background:var(--panel);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.05);z-index:10;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.7);max-height:93vh;overflow:hidden;}
+.hdr{flex-shrink:0;padding:20px 20px 12px;border-bottom:1px solid #1a1a1a;display:flex;flex-direction:column;gap:4px;}
+#uc{overflow-y:auto;overflow-x:hidden;padding:16px 20px 28px;display:flex;flex-direction:column;gap:11px;flex:1;min-height:0;}
+#uc::-webkit-scrollbar{width:4px;}#uc::-webkit-scrollbar-track{background:transparent;}#uc::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
+#uc.col{display:none;}
+.tr{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+h1{margin:0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text);display:flex;flex-direction:column;gap:2px;}
+h1 span{font-size:11px;font-weight:400;text-transform:none;letter-spacing:.5px;color:var(--muted);}
+.sub{font-size:10px;color:var(--muted);}
+.sdiv{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#404040;padding-bottom:5px;border-bottom:1px solid #1a1a1a;margin-top:2px;}
+label{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.vi{background:transparent;border:none;color:var(--accent);font-family:'Manrope',sans-serif;font-size:10px;text-align:right;width:44px;padding:0;outline:none;cursor:text;-moz-appearance:textfield;}
+.vi:hover,.vi:focus{color:#fff;background:rgba(255,255,255,.05);}
+.vi::-webkit-outer-spin-button,.vi::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.cg{padding:5px 8px;border-radius:4px;}
+.sw{position:relative;width:100%;height:20px;display:flex;align-items:center;}
+input[type=range]{-webkit-appearance:none;width:100%;background:transparent;margin:0;cursor:pointer;}
+input[type=range]::-webkit-slider-runnable-track{width:100%;height:2px;background:var(--track);border:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:14px;width:8px;background:var(--thumb);border:none;border-radius:1px;margin-top:-6px;box-shadow:0 1px 3px rgba(0,0,0,.5);transition:transform .1s;}
+input[type=range]::-webkit-slider-thumb:hover{background:#fff;transform:scale(1.1);}
+input[type=range]:focus{outline:none;}
+.sr{display:flex;width:100%;gap:1px;background:var(--track);padding:1px;border-radius:2px;}
+.sb{flex:1;background:var(--panel);border:none;color:var(--muted);font-size:9px;font-weight:700;padding:6px 0;cursor:pointer;transition:all .2s;text-transform:uppercase;font-family:inherit;}
+.sb:hover{color:var(--text);background:rgba(255,255,255,.05);}
+.sb.on{background:var(--act-bg);color:var(--act-txt);}
+.ge{display:flex;flex-direction:column;gap:6px;background:rgba(0,0,0,.35);padding:8px;border-radius:2px;}
+#gp{width:100%;height:12px;border-radius:1px;display:block;}
+.cs{display:flex;align-items:center;gap:8px;}
+.cs label{margin:0;font-size:9px;color:#555;min-width:30px;flex-shrink:0;}
+.cs input[type=color]{width:28px;height:18px;border:1px solid #333;background:transparent;cursor:pointer;padding:1px;border-radius:1px;flex-shrink:0;}
+.cs input[type=range]{flex:1;}
+.cs .vi{width:36px;}
+#wcb{border:1px dashed var(--track);background:rgba(0,0,0,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .2s ease;color:var(--muted);font-family:inherit;padding:14px 8px;text-align:center;width:100%;}
+#wcb:hover{border-color:var(--muted);background:rgba(255,255,255,.02);color:var(--text);}
+#wcb.on{border-color:var(--text);background:rgba(255,255,255,.05);color:var(--text);}
+#wcb svg{width:14px;height:14px;fill:currentColor;margin-bottom:2px;}
+.cl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.cs2{font-size:9px;color:var(--muted);}
+#tb,#fb{display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.55;transition:opacity .2s,background .2s;padding:4px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);min-width:26px;min-height:26px;}
+#tb:hover,#fb:hover{opacity:1;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);}
+#tb svg,#fb svg{width:14px;height:14px;fill:var(--text);transition:transform .3s;}
+#tb.r svg{transform:rotate(180deg);}
+#fb{display:none;}#fb.vis{display:flex;}
+.sd{width:6px;height:6px;border-radius:50%;background:#333;flex-shrink:0;transition:background .3s;}
+.sd.act{background:#3dff8f;box-shadow:0 0 6px #3dff8f88;}
+.sd.det{background:#ffb340;box-shadow:0 0 6px #ffb34088;animation:pu 1s infinite;}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.4}}
+#sr2{display:flex;align-items:center;gap:8px;font-size:9px;color:#555;padding:6px 8px;background:rgba(0,0,0,.3);border-radius:2px;}
+#hcb{margin-left:auto;font-size:9px;color:#444;font-weight:700;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<video id="vid" style="display:none;" playsinline autoplay muted></video>
+
+<div id="ui">
+  <div class="hdr">
+    <div class="tr">
+      <h1>Hand Fluid<span>curl noise · fluid dynamics</span></h1>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-top:1px;">
+        <button id="fb" title="Flip">
+          <svg viewBox="0 0 24 24"><path d="M15 21v-3.08L18.95 21H15zm7-14L10 19.93V21h1.05L22 8.62V7zM2 4.27l4.04 4.04C4.78 9.22 4 10.52 4 12c0 2.76 2.24 5 5 5 1.48 0 2.78-.78 3.69-2.04l1.45 1.45C12.93 18.12 11.05 19 9 19c-3.87 0-7-3.13-7-7 0-2.03.87-3.86 2.25-5.17L2 4.27zM22 4h-9.17l2 2H19v10.83l2 2V6c0-1.1-.9-2-2-2H4.17l-2-2H1v1.17L21.17 22H22v-1.17L4 3.17V4h18z"/></svg>
+        </button>
+        <button id="tb" title="Toggle">
+          <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="sub">MediaPipe Hands · Pseudo-fluid particles</div>
+  </div>
+
+  <div id="uc">
+
+    <div class="sdiv">Camera</div>
+    <button id="wcb">
+      <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+      <span class="cl">Start Camera</span>
+      <span class="cs2" id="csub">click to enable webcam</span>
+    </button>
+    <div id="sr2">
+      <div class="sd" id="sdot"></div>
+      <span id="stxt">camera off</span>
+      <span id="hcb">0 hands</span>
+    </div>
+
+    <div class="sdiv">Visualization</div>
+    <div class="cg"><label>Video Layer</label>
+      <div class="sr" id="vl-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg"><label>Skeleton</label>
+      <div class="sr" id="sk-btns">
+        <button class="sb" data-v="on">ON</button><button class="sb on" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg"><label>Landmark Dots</label>
+      <div class="sr" id="ld-btns">
+        <button class="sb" data-v="on">ON</button><button class="sb on" data-v="off">OFF</button>
+      </div>
+    </div>
+
+    <div class="sdiv">Fluid Particles</div>
+    <div class="cg"><label>Emit Rate <input type="number" class="vi" id="v-emit" value="6"></label>
+      <div class="sw"><input type="range" id="s-emit" min="1" max="24" value="6" step="1"></div>
+    </div>
+    <div class="cg"><label>Lifetime (fr) <input type="number" class="vi" id="v-life" value="90"></label>
+      <div class="sw"><input type="range" id="s-life" min="10" max="300" value="90" step="1"></div>
+    </div>
+    <div class="cg"><label>Size <input type="number" class="vi" id="v-size" value="5"></label>
+      <div class="sw"><input type="range" id="s-size" min="1" max="40" value="5" step="0.5"></div>
+    </div>
+    <div class="cg"><label>Size Var <input type="number" class="vi" id="v-svar" value="3"></label>
+      <div class="sw"><input type="range" id="s-svar" min="0" max="30" value="3" step="0.5"></div>
+    </div>
+    <div class="cg"><label>Fingertips Only</label>
+      <div class="sr" id="ft-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+
+    <div class="sdiv">Fluid Physics</div>
+    <div class="cg"><label>Curl Strength <input type="number" class="vi" id="v-curl" value="1.2"></label>
+      <div class="sw"><input type="range" id="s-curl" min="0" max="5" value="1.2" step="0.05"></div>
+    </div>
+    <div class="cg"><label>Curl Scale <input type="number" class="vi" id="v-cscl" value="0.004"></label>
+      <div class="sw"><input type="range" id="s-cscl" min="0.001" max="0.02" value="0.004" step="0.001"></div>
+    </div>
+    <div class="cg"><label>Curl Speed <input type="number" class="vi" id="v-cspd" value="0.003"></label>
+      <div class="sw"><input type="range" id="s-cspd" min="0" max="0.02" value="0.003" step="0.0005"></div>
+    </div>
+    <div class="cg"><label>Emitter Drag <input type="number" class="vi" id="v-drag" value="0.4"></label>
+      <div class="sw"><input type="range" id="s-drag" min="0" max="2" value="0.4" step="0.02"></div>
+    </div>
+    <div class="cg"><label>Birth Speed <input type="number" class="vi" id="v-bspd" value="1.5"></label>
+      <div class="sw"><input type="range" id="s-bspd" min="0" max="8" value="1.5" step="0.1"></div>
+    </div>
+    <div class="cg"><label>Damping <input type="number" class="vi" id="v-damp" value="0.97"></label>
+      <div class="sw"><input type="range" id="s-damp" min="0.8" max="1.0" value="0.97" step="0.005"></div>
+    </div>
+    <div class="cg"><label>Gravity <input type="number" class="vi" id="v-grav" value="0.02"></label>
+      <div class="sw"><input type="range" id="s-grav" min="-0.3" max="0.3" value="0.02" step="0.005"></div>
+    </div>
+
+    <div class="sdiv">Color over Life</div>
+    <div class="ge">
+      <canvas id="gp" height="12"></canvas>
+      <div class="cs"><label>Birth</label><input type="color" id="c-birth" value="#ffffff"><input type="range" id="a-birth" min="0" max="255" value="255" step="1"><input type="number" class="vi" id="av-birth" value="255"></div>
+      <div class="cs"><label>Mid</label><input type="color" id="c-mid" value="#ff5500"><input type="range" id="a-mid" min="0" max="255" value="200" step="1"><input type="number" class="vi" id="av-mid" value="200"></div>
+      <div class="cs"><label>Death</label><input type="color" id="c-death" value="#1100ff"><input type="range" id="a-death" min="0" max="255" value="0" step="1"><input type="number" class="vi" id="av-death" value="0"></div>
+    </div>
+
+    <div class="sdiv">Particle FX</div>
+    <div class="cg"><label>Glow (screen blend)</label>
+      <div class="sr" id="glow-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg"><label>Glow Radius <input type="number" class="vi" id="v-grad" value="2.2"></label>
+      <div class="sw"><input type="range" id="s-grad" min="0.5" max="6" value="2.2" step="0.1"></div>
+    </div>
+    <div class="cg"><label>Drop Shadow</label>
+      <div class="sr" id="shad-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg"><label>Hot Core</label>
+      <div class="sr" id="core-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+
+    <div class="sdiv">Blob Tracker</div>
+    <div class="cg"><label>Blob Tracking</label>
+      <div class="sr" id="bt-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg"><label>Track Count <input type="number" class="vi" id="v-bcnt" value="8"></label>
+      <div class="sw"><input type="range" id="s-bcnt" min="2" max="30" value="8" step="1"></div>
+    </div>
+    <div class="cg"><label>Box Size <input type="number" class="vi" id="v-bsz" value="18"></label>
+      <div class="sw"><input type="range" id="s-bsz" min="4" max="60" value="18" step="1"></div>
+    </div>
+    <div class="cg"><label>Line Opacity <input type="number" class="vi" id="v-lop" value="35"></label>
+      <div class="sw"><input type="range" id="s-lop" min="0" max="100" value="35" step="1"></div>
+    </div>
+    <div class="cg"><label>Line Curvature <input type="number" class="vi" id="v-lcv" value="30"></label>
+      <div class="sw"><input type="range" id="s-lcv" min="0" max="100" value="30" step="1"></div>
+    </div>
+    <div class="cg"><label>Blob Smoothing <input type="number" class="vi" id="v-bsm" value="0.15"></label>
+      <div class="sw"><input type="range" id="s-bsm" min="0.01" max="0.5" value="0.15" step="0.01"></div>
+    </div>
+    <div class="cg"><label>Reselect Interval (s) <input type="number" class="vi" id="v-bint" value="2.5"></label>
+      <div class="sw"><input type="range" id="s-bint" min="0.2" max="10" value="2.5" step="0.1"></div>
+    </div>
+
+    <div class="sdiv">Pinch Gate</div>
+    <div class="cg" style="padding:6px 8px 8px;background:rgba(80,255,180,0.04);border-radius:4px;border:1px solid rgba(80,255,180,0.08);">
+      <div style="font-size:9px;color:#3dff8f;opacity:0.7;margin-bottom:8px;line-height:1.5;">Particles emit only when a finger<br>touches the thumb. Rings show proximity.</div>
+      <label>Pinch Threshold <input type="number" class="vi" id="v-pth" value="0.07"></label>
+      <div class="sw"><input type="range" id="s-pth" min="0.02" max="0.25" value="0.07" step="0.005"></div>
+    </div>
+
+    <div class="sdiv">Depth Scale</div>
+    <div class="cg"><label>Depth Scaling</label>
+      <div class="sr" id="ds-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+    <div class="cg" style="font-size:9px;color:#555;padding:4px 8px 6px;line-height:1.5;">Hand closer → bigger particles.<br>Uses wrist–MCP span as depth proxy.</div>
+    <div class="cg"><label>Min Scale <input type="number" class="vi" id="v-dsmin" value="0.5"></label>
+      <div class="sw"><input type="range" id="s-dsmin" min="0.1" max="1.5" value="0.5" step="0.05"></div>
+    </div>
+    <div class="cg"><label>Max Scale <input type="number" class="vi" id="v-dsmax" value="2.5"></label>
+      <div class="sw"><input type="range" id="s-dsmax" min="1.0" max="6.0" value="2.5" step="0.1"></div>
+    </div>
+    <div class="cg"><label>Ref Distance <input type="number" class="vi" id="v-dsref" value="0.35"></label>
+      <div class="sw"><input type="range" id="s-dsref" min="0.1" max="0.7" value="0.35" step="0.01"></div>
+    </div>
+
+    <div class="sdiv">Detection</div>
+    <div class="cg"><label>Max Hands <input type="number" class="vi" id="v-mh" value="2"></label>
+      <div class="sw"><input type="range" id="s-mh" min="1" max="4" value="2" step="1"></div>
+    </div>
+    <div class="cg"><label>Confidence <input type="number" class="vi" id="v-cf" value="0.7"></label>
+      <div class="sw"><input type="range" id="s-cf" min="0.1" max="1.0" value="0.7" step="0.05"></div>
+    </div>
+    <div class="cg"><label>Mirror Cam</label>
+      <div class="sr" id="mir-btns">
+        <button class="sb on" data-v="on">ON</button><button class="sb" data-v="off">OFF</button>
+      </div>
+    </div>
+
+  </div><!-- #uc -->
+</div><!-- #ui -->
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js" crossorigin="anonymous"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════════════════════════════
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const vid = document.getElementById('vid');
+
+function resize(){ cv.width=innerWidth; cv.height=innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+const S = {
+    showVideo:true, showSkel:false, showDots:false, fingertipsOnly:true, mirrorCam:true,
+    emitRate:6, lifetime:90, size:5, sizeVar:3,
+    curlStr:1.2, curlScale:0.004, curlSpeed:0.003,
+    emitterDrag:0.4, birthSpeed:1.5, damping:0.97, gravity:0.02,
+    blobOn:true, blobCount:8, blobSize:18, lineOpacity:35, lineCurvature:30, blobSmooth:0.15,
+    blobInterval:2.5,  // seconds between each slot's particle reselection
+    maxHands:2, confidence:0.7,
+    cBirth:[255,255,255,255], cMid:[255,85,0,200], cDeath:[17,0,255,0],
+    // Particle FX
+    glowOn:true, glowRadius:2.2, shadowOn:true, coreOn:true,
+    pinchThresh:0.07,   // normalised distance (0-1 space) below which finger is "touching" thumb
+    // Depth scaling
+    depthScale:true,    // enable size scaling by hand depth
+    depthMin:0.5,       // size multiplier when hand is far (small wrist-MCP span)
+    depthMax:2.5,       // size multiplier when hand is close (large wrist-MCP span)
+    depthRef:0.35,      // reference wrist-MCP distance in norm coords (calibration midpoint)
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PERLIN / SIMPLEX-STYLE NOISE (value noise, 3D)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Compact 3D gradient noise — good enough for curl
+const P=(()=>{
+    const perm=new Uint8Array(512);
+    const p=new Uint8Array(256);
+    for(let i=0;i<256;i++) p[i]=i;
+    for(let i=255;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [p[i],p[j]]=[p[j],p[i]]; }
+    for(let i=0;i<512;i++) perm[i]=p[i&255];
+
+    function fade(t){ return t*t*t*(t*(t*6-15)+10); }
+    function lerp(a,b,t){ return a+(b-a)*t; }
+    const G3=[
+        [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+        [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+        [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+    ];
+    function grad3(h,x,y,z){ const g=G3[h%12]; return g[0]*x+g[1]*y+g[2]*z; }
+
+    function noise(x,y,z){
+        const X=Math.floor(x)&255, Y=Math.floor(y)&255, Z=Math.floor(z)&255;
+        x-=Math.floor(x); y-=Math.floor(y); z-=Math.floor(z);
+        const u=fade(x), v=fade(y), w=fade(z);
+        const A=perm[X]+Y, AA=perm[A]+Z, AB=perm[A+1]+Z;
+        const B=perm[X+1]+Y, BA=perm[B]+Z, BB=perm[B+1]+Z;
+        return lerp(
+            lerp(lerp(grad3(perm[AA],x,y,z),   grad3(perm[BA],x-1,y,z),u),
+                 lerp(grad3(perm[AB],x,y-1,z), grad3(perm[BB],x-1,y-1,z),u),v),
+            lerp(lerp(grad3(perm[AA+1],x,y,z-1),grad3(perm[BA+1],x-1,y,z-1),u),
+                 lerp(grad3(perm[AB+1],x,y-1,z-1),grad3(perm[BB+1],x-1,y-1,z-1),u),v),w);
+    }
+    return {noise};
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CURL NOISE
+//  curl(F) = (dFz/dy − dFy/dz,  dFx/dz − dFz/dx,  dFy/dx − dFx/dy)
+//  We use the 2-D slice: ax = dN/dy, ay = -dN/dx
+// ═══════════════════════════════════════════════════════════════════════════════
+const EPS = 0.0001;
+function curlAt(x, y, t){
+    const sc = S.curlScale;
+    const n1 = P.noise(x*sc, y*sc+EPS, t);
+    const n2 = P.noise(x*sc, y*sc-EPS, t);
+    const n3 = P.noise(x*sc+EPS, y*sc, t);
+    const n4 = P.noise(x*sc-EPS, y*sc, t);
+    const dy = (n1-n2)/(2*EPS);
+    const dx = (n3-n4)/(2*EPS);
+    // curl = (dy, -dx)  — gives divergence-free flow
+    return { cx: dy * S.curlStr * sc * 200,
+             cy:-dx * S.curlStr * sc * 200 };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EMITTERS  (one per fingertip / landmark)
+// ═══════════════════════════════════════════════════════════════════════════════
+class Emitter {
+    constructor(x,y){ this.x=x; this.y=y; this.vx=0; this.vy=0; this.px=x; this.py=y; }
+    update(nx,ny){
+        this.px=this.x; this.py=this.y;
+        // Smooth emitter position
+        this.x += (nx-this.x)*0.6;
+        this.y += (ny-this.y)*0.6;
+        this.vx = this.x-this.px;
+        this.vy = this.y-this.py;
+    }
+}
+let emitters=[];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════════════════════════
+const MAX_PARTICLES = 18000;
+// Typed arrays for perf
+let pX  = new Float32Array(MAX_PARTICLES);
+let pY  = new Float32Array(MAX_PARTICLES);
+let pVX = new Float32Array(MAX_PARTICLES);
+let pVY = new Float32Array(MAX_PARTICLES);
+let pAge= new Float32Array(MAX_PARTICLES);
+let pMax= new Float32Array(MAX_PARTICLES);
+let pSz = new Float32Array(MAX_PARTICLES);
+let pCount = 0;
+
+function spawnParticle(em, sizeScale){
+    if(pCount >= MAX_PARTICLES) return;
+    const i = pCount++;
+    // Inherit emitter velocity (drag-weighted) + small random burst
+    const bspd = S.birthSpeed;
+    const ang  = Math.random()*Math.PI*2;
+    pX[i]  = em.x + (Math.random()-0.5)*4;
+    pY[i]  = em.y + (Math.random()-0.5)*4;
+    pVX[i] = em.vx * S.emitterDrag + Math.cos(ang)*bspd*(0.5+Math.random()*0.5);
+    pVY[i] = em.vy * S.emitterDrag + Math.sin(ang)*bspd*(0.5+Math.random()*0.5);
+    pAge[i]= 0;
+    pMax[i]= S.lifetime + (Math.random()*40-20);
+    pSz[i] = Math.max(0.5, (S.size + (Math.random()*2-1)*S.sizeVar) * sizeScale);
+}
+
+let noiseTime = 0;
+
+function updateParticles(){
+    noiseTime += S.curlSpeed;
+    let alive = 0;
+    for(let i=0;i<pCount;i++){
+        pAge[i]++;
+        if(pAge[i] >= pMax[i]) continue; // dead — skip (compact below)
+
+        // Curl noise acceleration
+        const { cx, cy } = curlAt(pX[i], pY[i], noiseTime);
+        pVX[i] += cx * 0.016;
+        pVY[i] += cy * 0.016;
+
+        // Gravity
+        pVY[i] += S.gravity;
+
+        // Damping
+        pVX[i] *= S.damping;
+        pVY[i] *= S.damping;
+
+        // Integrate
+        pX[i] += pVX[i];
+        pY[i] += pVY[i];
+
+        // Compact — move alive to front
+        if(alive !== i){
+            pX[alive]=pX[i]; pY[alive]=pY[i];
+            pVX[alive]=pVX[i]; pVY[alive]=pVY[i];
+            pAge[alive]=pAge[i]; pMax[alive]=pMax[i]; pSz[alive]=pSz[i];
+        }
+        alive++;
+    }
+    pCount = alive;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  COLOR LERP
+// ═══════════════════════════════════════════════════════════════════════════════
+function lp(a,b,t){ return a+(b-a)*t; }
+function particleColor(t){
+    let r,g,b,a;
+    if(t<0.5){ const f=t/0.5;
+        r=lp(S.cBirth[0],S.cMid[0],f); g=lp(S.cBirth[1],S.cMid[1],f);
+        b=lp(S.cBirth[2],S.cMid[2],f); a=lp(S.cBirth[3],S.cMid[3],f);
+    } else { const f=(t-0.5)/0.5;
+        r=lp(S.cMid[0],S.cDeath[0],f); g=lp(S.cMid[1],S.cDeath[1],f);
+        b=lp(S.cMid[2],S.cDeath[2],f); a=lp(S.cMid[3],S.cDeath[3],f);
+    }
+    return [r|0,g|0,b|0,a];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BLOB TRACKER — timed reselection with per-slot offset + freeze on death
+//
+//  Each slot tracks a SPECIFIC particle index (not just an evenly-spaced one).
+//  Slots are staggered: slot b reselects at time  (lastReselect + b * interval/n),
+//  so they never all snap at once.  If the tracked particle has died the slot
+//  freezes at its last known position until its next reselect tick.
+// ═══════════════════════════════════════════════════════════════════════════════
+let blobSlots = [];   // { x, y, trackedIdx, nextReselect, frozen }
+
+function initBlobSlots(n){
+    const now = performance.now();
+    const intervalMs = S.blobInterval * 1000;
+    while(blobSlots.length < n){
+        const b = blobSlots.length;
+        // Stagger initial reselect time across the full interval window
+        const offset = (b / n) * intervalMs;
+        blobSlots.push({
+            x: innerWidth/2, y: innerHeight/2,
+            trackedIdx: -1,
+            nextReselect: now + offset,
+            frozen: false
+        });
+    }
+    blobSlots.length = n;
+}
+
+function reselectSlot(slot, b, n){
+    if(pCount === 0){ slot.trackedIdx = -1; slot.frozen = true; return; }
+    // Pick a particle index that is offset from what other slots would pick —
+    // distribute picks across the pool using the slot index as phase offset
+    const phase  = (b / n + 0.17 * b) % 1.0; // irrational-ish offset
+    const idx    = Math.floor(phase * pCount) % pCount;
+    slot.trackedIdx = idx;
+    slot.frozen     = false;
+}
+
+function updateBlobSlots(){
+    const n   = S.blobCount;
+    const now = performance.now();
+    const intervalMs = S.blobInterval * 1000;
+
+    initBlobSlots(n);
+
+    for(let b = 0; b < n; b++){
+        const slot = blobSlots[b];
+
+        // Reselect if it's time for this slot
+        if(now >= slot.nextReselect){
+            reselectSlot(slot, b, n);
+            slot.nextReselect = now + intervalMs;
+        }
+
+        // Track or freeze
+        const idx = slot.trackedIdx;
+        if(!slot.frozen && idx >= 0 && idx < pCount && pAge[idx] < pMax[idx]){
+            // Particle alive — smooth-follow it
+            const sm = S.blobSmooth;
+            slot.x += (pX[idx] - slot.x) * sm;
+            slot.y += (pY[idx] - slot.y) * sm;
+        } else {
+            // Particle dead or invalid — freeze position
+            slot.frozen     = true;
+            slot.trackedIdx = -1;
+        }
+    }
+}
+
+function drawBlobs(){
+    if(!S.blobOn) return;
+    const n   = S.blobCount;
+    const bs  = S.blobSize;
+    const lop = S.lineOpacity / 100;
+    const lcv = S.lineCurvature;
+
+    ctx.save();
+
+    // ── Lines ─────────────────────────────────────────────────────────────
+    ctx.lineWidth = 1;
+    for(let a=0; a<n; a++){
+        for(let b=a+1; b<n; b++){
+            const sa = blobSlots[a], sb = blobSlots[b];
+            const dx = sb.x - sa.x, dy = sb.y - sa.y;
+            const dist = Math.sqrt(dx*dx+dy*dy);
+            if(dist > 600) continue;
+            const fade = Math.max(0, 1 - dist/600);
+            // Frozen slots draw dimmer lines
+            const frozenDim = (sa.frozen || sb.frozen) ? 0.35 : 1.0;
+            ctx.strokeStyle = `rgba(255,255,255,${(lop*fade*frozenDim).toFixed(3)})`;
+            ctx.beginPath();
+            if(lcv > 0){
+                const mx = (sa.x+sb.x)/2, my = (sa.y+sb.y)/2;
+                const perp = lcv * 0.6;
+                ctx.moveTo(sa.x, sa.y);
+                ctx.quadraticCurveTo(mx+(-dy/dist)*perp, my+(dx/dist)*perp, sb.x, sb.y);
+            } else {
+                ctx.moveTo(sa.x, sa.y); ctx.lineTo(sb.x, sb.y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // ── Boxes ──────────────────────────────────────────────────────────────
+    for(let b=0; b<n; b++){
+        const slot = blobSlots[b];
+        const bx = slot.x, by = slot.y, half = bs/2;
+        // Frozen slots render in a muted blue-grey; live slots in white
+        const boxCol = slot.frozen ? '100,140,200' : '220,220,220';
+        const boxAlpha = (slot.frozen ? lop*0.5 : lop*1.8).toFixed(3);
+
+        ctx.strokeStyle = `rgba(${boxCol},${boxAlpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(bx-half, by-half, bs, bs);
+
+        // Corner ticks
+        const tk = 4;
+        const tickAlpha = (slot.frozen ? lop*0.7 : lop*2.5).toFixed(3);
+        ctx.strokeStyle = `rgba(${boxCol},${tickAlpha})`;
+        ctx.lineWidth   = 1.2;
+        [[bx-half,by-half, tk,0, 0,tk],[bx+half,by-half,-tk,0, 0,tk],
+         [bx-half,by+half,  tk,0, 0,-tk],[bx+half,by+half,-tk,0, 0,-tk]]
+        .forEach(([x,y,ax,ay,bxv,byv])=>{
+            ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+ax,y+ay); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+bxv,y+byv); ctx.stroke();
+        });
+
+        // Small status dot: green=tracking, blue=frozen
+        ctx.fillStyle = slot.frozen ? 'rgba(80,140,255,0.6)' : 'rgba(80,255,140,0.7)';
+        ctx.beginPath(); ctx.arc(bx+half-2, by-half+2, 2, 0, Math.PI*2); ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  DRAW PARTICLES  — glow core + soft halo + drop shadow
+// ═══════════════════════════════════════════════════════════════════════════════
+function drawParticles(){
+    if(pCount === 0) return;
+
+    // ── Pass 1: soft outer halo (large, very transparent) ──────────────────
+    if(S.glowOn){
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen'; // additive glow
+    for(let i=0;i<pCount;i++){
+        const t = pAge[i]/pMax[i];
+        const [r,g,b,a] = particleColor(t);
+        if(a < 4) continue;
+        const sz   = Math.max(0.3, pSz[i]*(1-t*0.4));
+        const halo = sz * S.glowRadius;
+        const ha   = (a/255) * 0.18 * (1-t*0.6);
+        if(ha < 0.005) continue;
+        // Radial gradient halo
+        const grd = ctx.createRadialGradient(pX[i],pY[i],0, pX[i],pY[i], halo);
+        grd.addColorStop(0,   `rgba(${r},${g},${b},${ha.toFixed(3)})`);
+        grd.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(pX[i], pY[i], halo, 0, Math.PI*2);
+        ctx.fill();
+    }
+    ctx.restore();
+    }
+
+    // ── Pass 2: core particle with shadow ───────────────────────────────────
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    for(let i=0;i<pCount;i++){
+        const t = pAge[i]/pMax[i];
+        const [r,g,b,a] = particleColor(t);
+        if(a < 2) continue;
+        const sz = Math.max(0.3, pSz[i]*(1-t*0.4));
+
+        // Shadow — offset slightly down-right, colour tinted to particle
+        if(S.shadowOn){
+        ctx.shadowColor  = `rgba(${r>>1},${g>>1},${b>>1},0.55)`;
+        ctx.shadowBlur   = sz * 1.8;
+        ctx.shadowOffsetX= sz * 0.25;
+        ctx.shadowOffsetY= sz * 0.35;
+        }
+
+        ctx.fillStyle = `rgba(${r},${g},${b},${(a/255).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(pX[i], pY[i], sz/2, 0, Math.PI*2);
+        ctx.fill();
+    }
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+    ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+    ctx.restore();
+
+    // ── Pass 3: bright specular centre dot ──────────────────────────────────
+    if(S.coreOn){
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for(let i=0;i<pCount;i++){
+        const t = pAge[i]/pMax[i];
+        if(t > 0.55) continue; // only young particles get the white hot core
+        const [r,g,b,a] = particleColor(t);
+        if(a < 80) continue;
+        const sz     = Math.max(0.3, pSz[i]*(1-t*0.4));
+        const coreR  = sz * 0.18;
+        const coreA  = ((a/255) * (1-t/0.55) * 0.9).toFixed(3);
+        ctx.fillStyle= `rgba(255,255,255,${coreA})`;
+        ctx.beginPath();
+        ctx.arc(pX[i], pY[i], coreR, 0, Math.PI*2);
+        ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VIDEO → CANVAS MAPPING
+// ═══════════════════════════════════════════════════════════════════════════════
+function videoRect(){
+    const cw=cv.width, ch=cv.height;
+    const vW=vid.videoWidth||cw, vH=vid.videoHeight||ch;
+    const vr=vW/vH; let vw,vh;
+    if(cw/ch>vr){ vh=ch; vw=vh*vr; } else { vw=cw; vh=vw/vr; }
+    return { vw, vh, vx:(cw-vw)/2, vy:(ch-vh)/2 };
+}
+
+function lmXY(lm){
+    const {vw,vh,vx,vy}=videoRect();
+    const nx = S.mirrorCam ? (1-lm.x) : lm.x;
+    return { x: vx+nx*vw, y: vy+lm.y*vh };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LANDMARK IDS
+// ═══════════════════════════════════════════════════════════════════════════════
+// Thumb (4) is trigger-only — excluded from emitter landmark sets
+const TIP_IDS    = [8,12,16,20];
+const ALL_IDS    = [8,12,16,20,6,10,14,18];
+const FINGER_TIPS= [8,12,16,20]; // non-thumb tips used in pinch detection
+const CONNS      = [[0,1],[1,2],[2,3],[3,4],[5,6],[6,7],[7,8],[9,10],[10,11],[11,12],
+                    [13,14],[14,15],[15,16],[17,18],[18,19],[19,20],[0,5],[5,9],[9,13],[13,17],[0,17]];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MEDIAPIPE STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let handsModel=null, cameraStream=null, cameraActive=false, processing=false;
+let latestLandmarks=null;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════════════════════════════════════════
+function loop(){
+    requestAnimationFrame(loop);
+
+    // Soft-clear for trail effect
+    ctx.fillStyle='rgba(11,11,11,0.78)';
+    ctx.fillRect(0,0,cv.width,cv.height);
+
+    if(!cameraActive){
+        ctx.fillStyle='#2a2a2a'; ctx.font='13px Manrope,sans-serif';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('Start camera to begin →',cv.width/2,cv.height/2);
+        return;
+    }
+
+    // Video layer
+    if(S.showVideo && vid.readyState>=2){
+        const {vw,vh,vx,vy}=videoRect();
+        ctx.save(); ctx.globalAlpha=0.65;
+        if(S.mirrorCam){ ctx.translate(cv.width,0); ctx.scale(-1,1); ctx.drawImage(vid,cv.width-vx-vw,vy,vw,vh); }
+        else ctx.drawImage(vid,vx,vy,vw,vh);
+        ctx.restore();
+    }
+
+    // Process landmarks → pinch gate → depth scale → update emitters → spawn particles
+    if(latestLandmarks){
+        const ids = S.fingertipsOnly ? TIP_IDS : ALL_IDS;
+
+        // Ensure emitter pool matches needed count
+        const needed = latestLandmarks.length * ids.length;
+        while(emitters.length < needed) emitters.push(new Emitter(cv.width/2,cv.height/2));
+
+        let ei=0;
+        for(const lms of latestLandmarks){
+            const pts = lms.map(lm=>lmXY(lm));
+
+            // ── DEPTH SCALE ──────────────────────────────────────────────────
+            // Use wrist (0) → middle-finger-MCP (9) distance in *normalised* coords
+            // as a proxy for hand depth. Larger = closer to camera.
+            let depthMult = 1.0;
+            if(S.depthScale){
+                const dx = lms[9].x - lms[0].x;
+                const dy = lms[9].y - lms[0].y;
+                const handSpan = Math.sqrt(dx*dx + dy*dy); // 0-1 normalised
+                // Map span relative to reference: closer hand → bigger scale
+                depthMult = Math.max(S.depthMin, Math.min(S.depthMax, handSpan / S.depthRef));
+            }
+
+            // ── PINCH DETECTION (finger tip vs thumb tip LM4) ────────────────
+            // Thumb (LM4) is trigger-only — never emits particles itself.
+            // Each non-thumb fingertip that comes within pinchThresh of the thumb
+            // gets added to the pinching set and becomes an active emitter.
+            const thumbLm  = lms[4];
+            const pinching = new Set();
+            for(const fid of FINGER_TIPS){
+                const fl = lms[fid];
+                const d  = Math.hypot(fl.x-thumbLm.x, fl.y-thumbLm.y);
+                if(d < S.pinchThresh) pinching.add(fid);
+            }
+
+            // Skeleton
+            if(S.showSkel){
+                ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1.5;
+                for(const [a,b] of CONNS){ ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y); ctx.stroke(); }
+                ctx.restore();
+            }
+
+            // Dots — highlight pinching tips
+            if(S.showDots){
+                for(let i=0;i<pts.length;i++){
+                    const tip=TIP_IDS.includes(i);
+                    const isPinch = pinching.has(i);
+                    ctx.beginPath(); ctx.arc(pts[i].x,pts[i].y,tip?6:3,0,Math.PI*2);
+                    ctx.fillStyle = isPinch ? 'rgba(80,255,180,0.95)' : (tip?'rgba(255,120,60,.9)':'rgba(200,200,200,.6)');
+                    ctx.fill();
+                }
+            }
+
+            // Draw pinch proximity ring on thumb & active finger
+            for(const fid of FINGER_TIPS){
+                const fl  = lms[fid];
+                const d   = Math.hypot(fl.x-thumbLm.x, fl.y-thumbLm.y);
+                const t   = Math.max(0, 1 - d/S.pinchThresh); // 0=far, 1=touching
+                if(t > 0.05){
+                    const fp  = pts[fid];
+                    const tp  = pts[4];
+                    const rad = 10 + (1-t)*14;
+                    ctx.save();
+                    ctx.globalAlpha = t * 0.55;
+                    ctx.strokeStyle = `rgba(80,255,180,1)`;
+                    ctx.lineWidth   = 1.2;
+                    ctx.beginPath(); ctx.arc(fp.x, fp.y, rad, 0, Math.PI*2); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(tp.x, tp.y, rad, 0, Math.PI*2); ctx.stroke();
+                    // connecting dotted line
+                    ctx.setLineDash([3,4]);
+                    ctx.beginPath(); ctx.moveTo(fp.x,fp.y); ctx.lineTo(tp.x,tp.y); ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Emitter update + spawn — only for pinching ids
+            for(const id of ids){
+                const shouldEmit = pinching.has(id);
+                if(ei < emitters.length){
+                    emitters[ei].update(pts[id].x, pts[id].y);
+                    if(shouldEmit){
+                        for(let k=0;k<S.emitRate;k++) spawnParticle(emitters[ei], depthMult);
+                    }
+                    ei++;
+                }
+            }
+        }
+    } else {
+        emitters=[];
+    }
+
+    // Physics
+    updateParticles();
+
+    // Render
+    drawParticles();
+
+    // Blob tracker
+    updateBlobSlots();
+    drawBlobs();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MEDIAPIPE
+// ═══════════════════════════════════════════════════════════════════════════════
+async function pumpFrames(){
+    if(!cameraActive) return;
+    if(!processing && vid.readyState>=2 && vid.videoWidth>0){
+        processing=true;
+        try{ await handsModel.send({image:vid}); }catch(e){}
+        processing=false;
+    }
+    requestAnimationFrame(pumpFrames);
+}
+
+async function startCamera(){
+    if(!handsModel){
+        handsModel=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`});
+        handsModel.setOptions({maxNumHands:S.maxHands,modelComplexity:1,minDetectionConfidence:S.confidence,minTrackingConfidence:0.5});
+        handsModel.onResults(r=>{
+            latestLandmarks=(r.multiHandLandmarks&&r.multiHandLandmarks.length)?r.multiHandLandmarks:null;
+            const n=latestLandmarks?latestLandmarks.length:0;
+            document.getElementById('hcb').textContent=n+(n===1?' hand':' hands');
+            document.getElementById('sdot').className='sd '+(n>0?'act':'det');
+            document.getElementById('stxt').textContent=n>0?'tracking':'searching...';
+        });
+    }
+    try{
+        cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false});
+        vid.srcObject=cameraStream;
+        await new Promise(res=>{ vid.onloadedmetadata=()=>vid.play().then(res); });
+        cameraActive=true;
+        document.getElementById('wcb').classList.add('on');
+        document.getElementById('wcb').querySelector('.cl').textContent='Camera Active';
+        document.getElementById('wcb').querySelector('.cs2').textContent='click to stop';
+        document.getElementById('sdot').className='sd det';
+        document.getElementById('stxt').textContent='loading model...';
+        document.getElementById('fb').classList.add('vis');
+        pumpFrames();
+    }catch(e){
+        console.error(e);
+        document.getElementById('stxt').textContent='error: '+e.message;
+    }
+}
+
+function stopCamera(){
+    cameraActive=false;
+    if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+    vid.srcObject=null; latestLandmarks=null; pCount=0; emitters=[]; blobSlots=[];
+    document.getElementById('wcb').classList.remove('on');
+    document.getElementById('wcb').querySelector('.cl').textContent='Start Camera';
+    document.getElementById('wcb').querySelector('.cs2').textContent='click to enable webcam';
+    document.getElementById('sdot').className='sd';
+    document.getElementById('stxt').textContent='camera off';
+    document.getElementById('hcb').textContent='0 hands';
+    document.getElementById('fb').classList.remove('vis');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  GRADIENT PREVIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateGP(){
+    const pc=document.getElementById('gp');
+    const pw=(pc.parentElement?.clientWidth||220)-16;
+    pc.width=Math.max(pw,80);
+    const gc=pc.getContext('2d');
+    const g=gc.createLinearGradient(0,0,pc.width,0);
+    const fmt=(c)=>`rgba(${c[0]},${c[1]},${c[2]},${(c[3]/255).toFixed(2)})`;
+    g.addColorStop(0,fmt(S.cBirth)); g.addColorStop(0.5,fmt(S.cMid)); g.addColorStop(1,fmt(S.cDeath));
+    gc.fillStyle='#111'; gc.fillRect(0,0,pc.width,pc.height);
+    gc.fillStyle=g;      gc.fillRect(0,0,pc.width,pc.height);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  UI WIRING
+// ═══════════════════════════════════════════════════════════════════════════════
+function tog(id,cb){
+    document.querySelectorAll(`#${id} .sb`).forEach(b=>{
+        b.addEventListener('click',()=>{
+            document.querySelectorAll(`#${id} .sb`).forEach(x=>x.classList.remove('on'));
+            b.classList.add('on'); cb(b.dataset.v);
+        });
+    });
+}
+function sld(name,min,max,cb){
+    const sl=document.getElementById('s-'+name), ip=document.getElementById('v-'+name);
+    if(!sl||!ip) return;
+    sl.addEventListener('input',()=>{ const v=parseFloat(sl.value); ip.value=v; cb(v); });
+    ip.addEventListener('change',()=>{ const v=Math.min(max,Math.max(min,parseFloat(ip.value)||min)); sl.value=v;ip.value=v;cb(v); });
+    ip.addEventListener('keydown',e=>e.stopPropagation());
+}
+function hexRgb(h){ return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function cStop(name,arr){
+    const cp=document.getElementById('c-'+name);
+    const as=document.getElementById('a-'+name);
+    const ai=document.getElementById('av-'+name);
+    function sync(){ const[r,g,b]=hexRgb(cp.value),a=parseInt(as.value); arr[0]=r;arr[1]=g;arr[2]=b;arr[3]=a; ai.value=a; updateGP(); }
+    cp.addEventListener('input',sync);
+    as.addEventListener('input',()=>{ ai.value=as.value; sync(); });
+    ai.addEventListener('change',()=>{ const v=Math.min(255,Math.max(0,parseInt(ai.value)||0)); as.value=v;ai.value=v;sync(); });
+    ai.addEventListener('keydown',e=>e.stopPropagation());
+}
+
+// Panel toggle
+document.getElementById('tb').addEventListener('click',()=>{
+    document.getElementById('uc').classList.toggle('col');
+    document.getElementById('tb').classList.toggle('r');
+});
+
+// Camera
+document.getElementById('wcb').addEventListener('click',()=>cameraActive?stopCamera():startCamera());
+document.getElementById('fb').addEventListener('click',()=>{ stopCamera(); setTimeout(startCamera,400); });
+
+// Visualization
+tog('vl-btns', v=>S.showVideo=v==='on');
+tog('sk-btns', v=>S.showSkel=v==='on');
+tog('ld-btns', v=>S.showDots=v==='on');
+tog('ft-btns', v=>S.fingertipsOnly=v==='on');
+tog('mir-btns',v=>S.mirrorCam=v==='on');
+
+// Particles
+sld('emit',1,24,  v=>S.emitRate=v);
+sld('life',10,300,v=>S.lifetime=v);
+sld('size',1,40,  v=>S.size=v);
+sld('svar',0,30,  v=>S.sizeVar=v);
+
+// Fluid
+sld('curl',0,5,      v=>S.curlStr=v);
+sld('cscl',0.001,0.02,v=>S.curlScale=v);
+sld('cspd',0,0.02,   v=>S.curlSpeed=v);
+sld('drag',0,2,      v=>S.emitterDrag=v);
+sld('bspd',0,8,      v=>S.birthSpeed=v);
+sld('damp',0.8,1.0,  v=>S.damping=v);
+sld('grav',-0.3,0.3, v=>S.gravity=v);
+
+// Color
+cStop('birth',S.cBirth);
+cStop('mid',  S.cMid);
+cStop('death',S.cDeath);
+
+// Particle FX
+tog('glow-btns', v=>S.glowOn=v==='on');
+sld('grad',0.5,6, v=>S.glowRadius=v);
+tog('shad-btns',  v=>S.shadowOn=v==='on');
+tog('core-btns',  v=>S.coreOn=v==='on');
+
+// Blob tracker
+tog('bt-btns',v=>S.blobOn=v==='on');
+sld('bcnt',2,30,  v=>{ S.blobCount=v; blobSlots=[]; initBlobSlots(v); });
+sld('bsz',4,60,   v=>S.blobSize=v);
+sld('lop',0,100,  v=>S.lineOpacity=v);
+sld('lcv',0,100,  v=>S.lineCurvature=v);
+sld('bsm',0.01,.5,v=>S.blobSmooth=v);
+sld('bint',0.2,10,v=>{ S.blobInterval=v; blobSlots=[]; }); // reset so offsets recalculate
+
+// Pinch gate
+sld('pth',0.02,0.25, v=>S.pinchThresh=v);
+
+// Depth scale
+tog('ds-btns', v=>S.depthScale=v==='on');
+sld('dsmin',0.1,1.5, v=>S.depthMin=v);
+sld('dsmax',1.0,6.0, v=>S.depthMax=v);
+sld('dsref',0.1,0.7, v=>S.depthRef=v);
+
+// Detection
+sld('mh',1,4,v=>{ S.maxHands=v; if(handsModel) handsModel.setOptions({maxNumHands:v,modelComplexity:1,minDetectionConfidence:S.confidence,minTrackingConfidence:0.5}); });
+sld('cf',0.1,1.0,v=>{ S.confidence=v; if(handsModel) handsModel.setOptions({maxNumHands:S.maxHands,modelComplexity:1,minDetectionConfidence:v,minTrackingConfidence:0.5}); });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════════════════
+updateGP();
+loop();
+</script>
+</body>
+</html>

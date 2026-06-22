@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>RECURSIVE GRID — Br_St.GFX</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080808;
+    --panel: #0f0f0f;
+    --border: #1e1e1e;
+    --accent: #00ffcc;
+    --accent2: #ff3366;
+    --muted: #444;
+    --text: #ccc;
+    --text-dim: #555;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    font-family: 'Manrope', sans-serif;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  #canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* ── UI Panel ── */
+  #ui {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(8,8,8,0.97) 70%, transparent);
+    padding: 14px 16px 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .ctrl-label {
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .ctrl-label span { color: var(--accent); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn:hover, .btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,255,204,0.05);
+  }
+  .btn.accent2.active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(255,51,102,0.05);
+  }
+
+  #start-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+  }
+
+  .overlay-brand {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .overlay-title {
+    font-size: clamp(28px, 7vw, 56px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #fff;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .overlay-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    text-align: center;
+    max-width: 280px;
+  }
+
+  .start-btn {
+    font-family: 'Manrope', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .start-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  #fps-counter {
+    position: fixed;
+    top: 12px;
+    right: 14px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="fps-counter">— FPS</div>
+
+<!-- Start overlay -->
+<div id="start-overlay">
+  <div class="overlay-brand">Br_St.GFX</div>
+  <div class="overlay-title">RECURSIVE<br>GRID</div>
+  <div class="overlay-sub">Generative subdivision patterns<br>driven by camera input</div>
+  <button class="start-btn" onclick="startApp()">ENABLE CAMERA</button>
+</div>
+
+<!-- Controls -->
+<div id="ui">
+  <div class="brand">Br_St.GFX — Recursive Grid</div>
+
+  <div class="controls-row">
+    <div class="ctrl-group">
+      <div class="ctrl-label">Depth <span id="depthVal">5</span></div>
+      <input type="range" id="depthSlider" min="2" max="7" step="1" value="5">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">Threshold <span id="threshVal">0.40</span></div>
+      <input type="range" id="threshSlider" min="0.1" max="0.9" step="0.01" value="0.40">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">Deform <span id="deformVal">0.50</span></div>
+      <input type="range" id="deformSlider" min="0" max="1.5" step="0.01" value="0.50">
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">Motion <span id="motionVal">0.60</span></div>
+      <input type="range" id="motionSlider" min="0" max="1" step="0.01" value="0.60">
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn active" id="btnFill" onclick="toggleMode('fill')">FILL</button>
+    <button class="btn" id="btnWire" onclick="toggleMode('wire')">WIRE</button>
+    <button class="btn" id="btnDot" onclick="toggleMode('dot')">DOT</button>
+    <button class="btn active" id="btnColor" onclick="toggleColor()">COLOR</button>
+    <button class="btn accent2" id="btnMirror" onclick="toggleMirror()">MIRROR</button>
+    <button class="btn" id="btnInvert" onclick="toggleInvert()">INVERT</button>
+    <button class="btn" id="btnRear" onclick="toggleCamera()">REAR CAM</button>
+  </div>
+</div>
+
+<video id="video" autoplay playsinline muted style="display:none"></video>
+
+<script>
+// ─────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const video  = document.getElementById('video');
+const fpsEl  = document.getElementById('fps-counter');
+
+// Sample canvas (small, for pixel reads)
+const sc  = document.createElement('canvas');
+const sctx = sc.getContext('2d');
+const SAMPLE_W = 64;
+const SAMPLE_H = 64;
+sc.width  = SAMPLE_W;
+sc.height = SAMPLE_H;
+
+// Prev frame for motion detection
+const mc  = document.createElement('canvas');
+const mctx = mc.getContext('2d');
+mc.width  = SAMPLE_W;
+mc.height = SAMPLE_H;
+
+let pixels     = null;
+let prevPixels = null;
+let motionMap  = null;
+
+let params = {
+  depth:    5,
+  thresh:   0.40,
+  deform:   0.50,
+  motion:   0.60,
+  mode:     'fill',   // fill | wire | dot
+  useColor: true,
+  mirror:   false,
+  invert:   false,
+};
+
+let useFrontCamera = true;
+let stream = null;
+let running = false;
+
+// FPS
+let lastTime = performance.now();
+let frameCount = 0;
+
+// ─────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────
+async function startApp() {
+  document.getElementById('start-overlay').style.display = 'none';
+  await startCamera();
+}
+
+async function startCamera(facingMode = 'user') {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+  } catch(e) {
+    alert('Camera access failed: ' + e.message);
+    return;
+  }
+  if (!running) { running = true; requestAnimationFrame(loop); }
+}
+
+async function toggleCamera() {
+  useFrontCamera = !useFrontCamera;
+  const btn = document.getElementById('btnRear');
+  btn.classList.toggle('active', !useFrontCamera);
+  await startCamera(useFrontCamera ? 'user' : 'environment');
+}
+
+// ─────────────────────────────────────────
+//  Pixel sampling
+// ─────────────────────────────────────────
+function sampleFrame() {
+  if (video.readyState < 2) return false;
+
+  // Save prev
+  if (!prevPixels) prevPixels = new Uint8ClampedArray(SAMPLE_W * SAMPLE_H * 4);
+  if (pixels) prevPixels.set(pixels);
+
+  // Draw video mirrored or normal into small canvas
+  sctx.save();
+  if (params.mirror || useFrontCamera) {
+    sctx.translate(SAMPLE_W, 0);
+    sctx.scale(-1, 1);
+  }
+  sctx.drawImage(video, 0, 0, SAMPLE_W, SAMPLE_H);
+  sctx.restore();
+
+  const data = sctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H).data;
+  pixels = data;
+
+  // Compute motion
+  if (!motionMap) motionMap = new Float32Array(SAMPLE_W * SAMPLE_H);
+  for (let i = 0; i < SAMPLE_W * SAMPLE_H; i++) {
+    const pi = i * 4;
+    const dr = pixels[pi]   - prevPixels[pi];
+    const dg = pixels[pi+1] - prevPixels[pi+1];
+    const db = pixels[pi+2] - prevPixels[pi+2];
+    const delta = Math.sqrt(dr*dr + dg*dg + db*db) / 441.67;
+    motionMap[i] = motionMap[i] * 0.7 + delta * 0.3; // temporal smoothing
+  }
+  return true;
+}
+
+function getPixelLuma(nx, ny) {
+  // nx, ny in [0,1]
+  const xi = Math.min(SAMPLE_W - 1, Math.floor(nx * SAMPLE_W));
+  const yi = Math.min(SAMPLE_H - 1, Math.floor(ny * SAMPLE_H));
+  const i  = (yi * SAMPLE_W + xi) * 4;
+  if (!pixels) return 0.5;
+  const r = pixels[i] / 255, g = pixels[i+1] / 255, b = pixels[i+2] / 255;
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+function getPixelColor(nx, ny) {
+  const xi = Math.min(SAMPLE_W - 1, Math.floor(nx * SAMPLE_W));
+  const yi = Math.min(SAMPLE_H - 1, Math.floor(ny * SAMPLE_H));
+  const i  = (yi * SAMPLE_W + xi) * 4;
+  if (!pixels) return [0,255,204];
+  return [pixels[i], pixels[i+1], pixels[i+2]];
+}
+
+function getMotion(nx, ny) {
+  const xi = Math.min(SAMPLE_W - 1, Math.floor(nx * SAMPLE_W));
+  const yi = Math.min(SAMPLE_H - 1, Math.floor(ny * SAMPLE_H));
+  const i  = yi * SAMPLE_W + xi;
+  return motionMap ? motionMap[i] : 0;
+}
+
+// ─────────────────────────────────────────
+//  Recursive Grid
+// ─────────────────────────────────────────
+function drawCell(x, y, w, h, depth, cx, cy) {
+  // cx/cy = normalized center [0,1]
+  const luma   = getPixelLuma(cx, cy);
+  const lumaV  = params.invert ? 1 - luma : luma;
+  const motion = getMotion(cx, cy) * params.motion;
+  const threshold = params.thresh - motion * 0.3;
+
+  // Subdivide if bright enough and depth allows
+  if (depth > 0 && lumaV > threshold) {
+    const hw = w * 0.5, hh = h * 0.5;
+    drawCell(x,      y,      hw, hh, depth-1, cx - hw/canvas.width*0.5, cy - hh/canvas.height*0.5);
+    drawCell(x+hw,   y,      hw, hh, depth-1, cx + hw/canvas.width*0.5, cy - hh/canvas.height*0.5);
+    drawCell(x,      y+hh,   hw, hh, depth-1, cx - hw/canvas.width*0.5, cy + hh/canvas.height*0.5);
+    drawCell(x+hw,   y+hh,   hw, hh, depth-1, cx + hw/canvas.width*0.5, cy + hh/canvas.height*0.5);
+    return;
+  }
+
+  // Leaf cell — draw with deformation
+  const deform = params.deform;
+  const jx = (Math.random() - 0.5) * w * deform * lumaV;
+  const jy = (Math.random() - 0.5) * h * deform * lumaV;
+  const mx = (Math.random() - 0.5) * w * deform * motion * 2;
+  const my = (Math.random() - 0.5) * h * deform * motion * 2;
+
+  const rx = x + jx + mx;
+  const ry = y + jy + my;
+  const rw = w * (1 - deform * 0.3 * lumaV);
+  const rh = h * (1 - deform * 0.3 * lumaV);
+
+  const [r, g, b] = getPixelColor(cx, cy);
+  const alpha = 0.6 + lumaV * 0.4;
+
+  ctx.save();
+  ctx.translate(rx + rw/2, ry + rh/2);
+  // Subtle rotation from motion
+  const rot = motion * deform * 0.8;
+  ctx.rotate((Math.random() - 0.5) * rot);
+
+  const mode = params.mode;
+
+  if (mode === 'fill') {
+    if (params.useColor) {
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    } else {
+      const v = Math.round(lumaV * 255);
+      ctx.fillStyle = `rgba(${v},${v},${v},${alpha})`;
+    }
+    ctx.fillRect(-rw/2, -rh/2, rw, rh);
+
+    // Accent stroke on motion cells
+    if (motion > 0.05) {
+      ctx.strokeStyle = `rgba(0,255,204,${motion * 0.8})`;
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(-rw/2, -rh/2, rw, rh);
+    }
+
+  } else if (mode === 'wire') {
+    if (params.useColor) {
+      ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    } else {
+      const v = Math.round(lumaV * 255);
+      ctx.strokeStyle = `rgba(${v},${v},${v},${alpha})`;
+    }
+    ctx.lineWidth = Math.max(0.3, lumaV * 1.5);
+    ctx.strokeRect(-rw/2, -rh/2, rw, rh);
+
+    // Center cross on deep cells
+    if (motion > 0.04) {
+      ctx.beginPath();
+      ctx.moveTo(-rw/4, 0); ctx.lineTo(rw/4, 0);
+      ctx.moveTo(0, -rh/4); ctx.lineTo(0, rh/4);
+      ctx.strokeStyle = `rgba(255,51,102,${motion})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+  } else if (mode === 'dot') {
+    const radius = Math.min(rw, rh) * 0.35 * (0.3 + lumaV * 0.7);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    if (params.useColor) {
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    } else {
+      const v = Math.round(lumaV * 255);
+      ctx.fillStyle = `rgba(${v},${v},${v},${alpha})`;
+    }
+    ctx.fill();
+
+    if (motion > 0.05) {
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.6, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0,255,204,${motion * 0.5})`;
+      ctx.lineWidth = 0.4;
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────
+//  Main loop
+// ─────────────────────────────────────────
+function loop(now) {
+  requestAnimationFrame(loop);
+
+  // FPS
+  frameCount++;
+  if (now - lastTime >= 1000) {
+    fpsEl.textContent = frameCount + ' FPS';
+    frameCount = 0;
+    lastTime = now;
+  }
+
+  // Resize canvas to viewport
+  const W = window.innerWidth, H = window.innerHeight;
+  if (canvas.width !== W || canvas.height !== H) {
+    canvas.width = W;
+    canvas.height = H;
+  }
+
+  if (!sampleFrame()) return;
+
+  // Clear with fade (trails effect)
+  ctx.fillStyle = 'rgba(8,8,8,0.75)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid subdivision — coarsest cells
+  const BASE = 4; // 4×4 base grid
+  const cellW = W / BASE;
+  const cellH = H / BASE;
+
+  for (let gy = 0; gy < BASE; gy++) {
+    for (let gx = 0; gx < BASE; gx++) {
+      const cx = (gx + 0.5) / BASE;
+      const cy = (gy + 0.5) / BASE;
+      drawCell(
+        gx * cellW, gy * cellH,
+        cellW, cellH,
+        params.depth - 1,
+        cx, cy
+      );
+    }
+  }
+}
+
+// ─────────────────────────────────────────
+//  UI bindings
+// ─────────────────────────────────────────
+function bindSlider(id, valId, key, fmt) {
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    params[key] = parseFloat(el.value);
+    vl.textContent = fmt ? fmt(params[key]) : params[key];
+  });
+}
+bindSlider('depthSlider',  'depthVal',  'depth',  v => v);
+bindSlider('threshSlider', 'threshVal', 'thresh', v => v.toFixed(2));
+bindSlider('deformSlider', 'deformVal', 'deform', v => v.toFixed(2));
+bindSlider('motionSlider', 'motionVal', 'motion', v => v.toFixed(2));
+
+function toggleMode(m) {
+  params.mode = m;
+  ['btnFill','btnWire','btnDot'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  const map = { fill:'btnFill', wire:'btnWire', dot:'btnDot' };
+  document.getElementById(map[m]).classList.add('active');
+}
+
+function toggleColor() {
+  params.useColor = !params.useColor;
+  document.getElementById('btnColor').classList.toggle('active', params.useColor);
+}
+
+function toggleMirror() {
+  params.mirror = !params.mirror;
+  document.getElementById('btnMirror').classList.toggle('active', params.mirror);
+}
+
+function toggleInvert() {
+  params.invert = !params.invert;
+  document.getElementById('btnInvert').classList.toggle('active', params.invert);
+}
+
+// Resize
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>

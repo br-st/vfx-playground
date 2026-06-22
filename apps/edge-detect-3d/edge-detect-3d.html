@@ -2,23 +2,1060 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coming Soon</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BR_ST — PARTICLE VISION</title>
 <style>
-  body { margin:0; background:#050a05; color:#00ff41; font-family:'Courier New',monospace;
-    display:flex; align-items:center; justify-content:center; min-height:100vh; }
-  .msg { text-align:center; }
-  .label { font-size:0.7rem; letter-spacing:0.2em; color:#00aa2b; margin-bottom:1rem; }
-  .title { font-size:1.4rem; letter-spacing:0.1em; margin-bottom:1.5rem; }
-  a { color:#00aa2b; font-size:0.75rem; letter-spacing:0.1em; text-decoration:none; border-bottom:1px solid #003d10; }
-  a:hover { color:#00ff41; }
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+:root {
+  --bg:#08090f; --surf:#10131c; --border:#1e2535;
+  --cyan:#00f0ff; --dim:#5a6a7e; --text:#dde4ef;
+  --mono:'Space Mono',monospace; --sans:'Space Grotesk',sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; overflow:hidden; background:var(--bg);
+  font-family:var(--sans); -webkit-tap-highlight-color:transparent; }
+button { font-family:var(--sans); cursor:pointer; border:none; background:none; }
+
+#canvas { position:fixed; inset:0; width:100%; height:100%; display:block; }
+#video  { position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; }
+#proc   { position:absolute; top:-9999px; left:-9999px; }
+
+/* ── Top-right buttons ──────────────────────────────────────────────────────── */
+.top-btn {
+  position:fixed; top:14px;
+  background:rgba(10,13,22,.88); border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  border-radius:10px; color:var(--dim);
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  letter-spacing:.04em; cursor:pointer; z-index:20;
+  -webkit-user-select:none; user-select:none;
+  transition:background .15s, color .15s;
+}
+.top-btn:active { background:rgba(255,255,255,.06); }
+#toggle { right:14px; padding:8px 12px; font-size:18px; letter-spacing:0; color:var(--text); }
+#srcBtn { left:14px; padding:8px 14px; }
+
+/* ── Source dropdown ─────────────────────────────────────────────────────────── */
+#srcPanel {
+  position:fixed; top:50px; left:14px; width:175px; z-index:25;
+  background:rgba(10,13,22,.96); border:1px solid var(--border);
+  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+  border-radius:12px; overflow:hidden;
+  transition:opacity .15s, transform .15s;
+}
+#srcPanel.hide { opacity:0; pointer-events:none; transform:translateY(-6px); }
+.src-opt {
+  display:block; width:100%; padding:11px 16px;
+  font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.12em;
+  color:var(--dim); text-align:left;
+  border-bottom:1px solid var(--border);
+  transition:background .1s, color .1s;
+}
+.src-opt:last-child { border-bottom:none; }
+.src-opt:active, .src-opt.active { background:rgba(0,240,255,.08); color:var(--cyan); }
+
+/* ── Bottom sheet ────────────────────────────────────────────────────────────── */
+#sheet-wrap {
+  position:fixed; bottom:0; left:0; right:0; z-index:15;
+  display:flex; flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .38s cubic-bezier(.32,.72,0,1);
+  padding-bottom:var(--safe-b);
+  pointer-events:none;
+}
+#sheet-wrap.open { transform:translateY(0); pointer-events:all; }
+
+.drag-handle-row {
+  display:flex; align-items:center; justify-content:center;
+  padding:10px 0 4px; cursor:pointer;
+  background:rgba(10,13,22,.98); border-top:1px solid var(--border);
+}
+.drag-pill { width:36px; height:4px; background:var(--border); border-radius:2px; }
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────────── */
+#tab-bar {
+  display:flex; background:rgba(10,13,22,.98);
+  border-bottom:1px solid var(--border);
+}
+.tab-btn {
+  flex:1; padding:9px 2px 8px;
+  font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.1em;
+  color:var(--dim); text-align:center; border-top:2px solid transparent;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:color .15s, border-top-color .15s;
+}
+.tab-btn.active { color:var(--text); border-top-color:var(--cyan); }
+
+/* ── Sheet panel / tab pages ─────────────────────────────────────────────────── */
+#sheet-panel {
+  background:rgba(10,13,22,.98);
+  overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  max-height:52vh; padding:16px 16px calc(10px + var(--safe-b));
+}
+.tab-page { display:none; }
+.tab-page.active { display:block; }
+
+.sec-lbl {
+  font-family:var(--mono); font-size:9px; color:var(--dim);
+  letter-spacing:.18em; text-transform:uppercase;
+  margin:16px 0 10px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.sec-lbl:first-child { margin-top:0; }
+
+/* ── Slider rows ─────────────────────────────────────────────────────────────── */
+.sl-row { display:flex; align-items:center; gap:10px; margin-bottom:13px; }
+.sl-name { font-family:var(--mono); font-size:10px; color:var(--dim); width:64px; flex-shrink:0; }
+.sl-val  { font-family:var(--mono); font-size:10px; color:var(--cyan); width:38px; text-align:right; flex-shrink:0; }
+
+input[type=range] {
+  flex:1; -webkit-appearance:none; appearance:none;
+  height:4px; background:var(--border); border-radius:2px; outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--cyan); box-shadow:0 0 8px rgba(0,240,255,.35); cursor:pointer;
+}
+input[type=range]::-moz-range-thumb {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--cyan); border:none; cursor:pointer;
+}
+
+/* ── Color row ───────────────────────────────────────────────────────────────── */
+.color-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+.color-item { display:flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:9px; color:var(--dim); letter-spacing:.08em; }
+input[type=color] {
+  -webkit-appearance:none; appearance:none;
+  width:32px; height:26px; padding:2px;
+  border:1px solid var(--border); border-radius:6px;
+  background:none; cursor:pointer;
+}
+
+/* ── Toggle pill (plane / strobe) ────────────────────────────────────────────── */
+.pill {
+  font-family:var(--mono); font-size:9px; font-weight:700; letter-spacing:.15em;
+  color:var(--dim); background:var(--surf); border:1px solid var(--border);
+  border-radius:8px; padding:7px 16px; cursor:pointer;
+  transition:background .15s, color .15s, border-color .15s;
+  -webkit-user-select:none; user-select:none;
+}
+.pill.on { color:var(--cyan); background:rgba(0,240,255,.1); border-color:rgba(0,240,255,.35); }
+
+.inline-row { display:flex; align-items:center; gap:10px; margin-bottom:13px; }
+
+/* ── Status / error ──────────────────────────────────────────────────────────── */
+#status {
+  position:fixed; bottom:14px; left:14px;
+  color:rgba(255,255,255,.2); font-family:var(--mono); font-size:10px;
+  letter-spacing:.08em; pointer-events:none; z-index:5;
+}
+#err {
+  position:fixed; inset:0; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,.85);
+  color:rgba(255,255,255,.55); font-family:var(--mono); font-size:13px; line-height:1.6;
+  text-align:center; z-index:30; padding:20px;
+}
+#err.show { display:flex; }
 </style>
 </head>
 <body>
-<div class="msg">
-  <div class="label">// STATUS</div>
-  <div class="title">[ UNDER CONSTRUCTION ]</div>
-  <a href="../../index.html">← RETURN TO TERMINAL</a>
+
+<canvas id="canvas"></canvas>
+<video id="video" autoplay muted playsinline></video>
+<canvas id="proc" width="90" height="160"></canvas>
+<canvas id="edgeCvs" width="90" height="160" style="position:absolute;top:-9999px;left:-9999px"></canvas>
+
+<button id="toggle" class="top-btn">☰</button>
+<button id="srcBtn" class="top-btn">⊙ SOURCE</button>
+
+<div id="srcPanel" class="hide">
+  <button class="src-opt active" id="optCamera">● LIVE CAMERA</button>
+  <button class="src-opt" id="optPhoto">◎ TAKE PHOTO</button>
+  <button class="src-opt" id="optFile">⊡ LOAD IMAGE</button>
 </div>
+<input type="file" id="fileIn" accept="image/*" style="display:none">
+<canvas id="srcCvs" width="90" height="160" style="position:absolute;top:-9999px;left:-9999px"></canvas>
+
+<div id="sheet-wrap">
+  <div class="drag-handle-row" id="drag-handle"><div class="drag-pill"></div></div>
+
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="emit">◈ EMIT</button>
+    <button class="tab-btn" data-tab="planes">⊞ PLANES</button>
+    <button class="tab-btn" data-tab="light">◎ LIGHT</button>
+    <button class="tab-btn" data-tab="strobe">⚡ STROBE</button>
+    <button class="tab-btn" data-tab="scene">◐ SCENE</button>
+  </div>
+
+  <div id="sheet-panel">
+
+    <!-- ── EMIT ── -->
+    <div class="tab-page active" id="tab-emit">
+      <div class="sec-lbl">Emission</div>
+      <div class="sl-row">
+        <span class="sl-name">Edge</span>
+        <input type="range" id="sEdge" min="5" max="220" value="180">
+        <span class="sl-val" id="vEdge">180</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Rate</span>
+        <input type="range" id="sEmit" min="0" max="2500" value="800">
+        <span class="sl-val" id="vEmit">800</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Life (s)</span>
+        <input type="range" id="sLife" min="5" max="120" value="30">
+        <span class="sl-val" id="vLife">3.0</span>
+      </div>
+      <div class="sec-lbl">Particle</div>
+      <div class="sl-row">
+        <span class="sl-name">Size</span>
+        <input type="range" id="sPSize" min="10" max="500" value="50">
+        <span class="sl-val" id="vPSize">0.5</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Arc Offset</span>
+        <input type="range" id="sArcOff" min="0" max="90" value="25">
+        <span class="sl-val" id="vArcOff">25°</span>
+      </div>
+    </div>
+
+    <!-- ── PLANES ── -->
+    <div class="tab-page" id="tab-planes">
+      <div class="sec-lbl">Rotation</div>
+      <div class="sl-row">
+        <span class="sl-name">Speed</span>
+        <input type="range" id="sRot" min="0" max="500" value="150">
+        <span class="sl-val" id="vRot">1.50</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Phase</span>
+        <input type="range" id="sPhase" min="0" max="90" value="17">
+        <span class="sl-val" id="vPhase">17°</span>
+      </div>
+      <div class="sec-lbl">Scale &amp; Visibility</div>
+      <div class="sl-row">
+        <span class="sl-name">Scale</span>
+        <input type="range" id="sPScale" min="10" max="300" value="100">
+        <span class="sl-val" id="vPScale">1.0</span>
+      </div>
+      <div class="inline-row">
+        <button id="bPlane" class="pill">OFF</button>
+        <input type="color" id="cPlane" value="#3366ff">
+        <span style="font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.1em">COLOUR</span>
+      </div>
+    </div>
+
+    <!-- ── LIGHT ── -->
+    <div class="tab-page" id="tab-light">
+      <div class="sec-lbl">Brightness</div>
+      <div class="sl-row">
+        <span class="sl-name">Key</span>
+        <input type="range" id="sKeyB" min="0" max="100" value="25">
+        <span class="sl-val" id="vKeyB">2.5</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Fill</span>
+        <input type="range" id="sFillB" min="0" max="100" value="20">
+        <span class="sl-val" id="vFillB">20</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Rim</span>
+        <input type="range" id="sRimB" min="0" max="100" value="30">
+        <span class="sl-val" id="vRimB">30</span>
+      </div>
+      <div class="sec-lbl">Colors</div>
+      <div class="color-row">
+        <div class="color-item"><input type="color" id="cLight" value="#fff4e0"> KEY</div>
+        <div class="color-item"><input type="color" id="cFill"  value="#5577cc"> FILL</div>
+        <div class="color-item"><input type="color" id="cRim"   value="#7722bb"> RIM</div>
+      </div>
+      <div class="sec-lbl" style="margin-top:16px">Rendering</div>
+      <div class="sl-row">
+        <span class="sl-name">Exposure</span>
+        <input type="range" id="sExpo" min="10" max="400" value="120">
+        <span class="sl-val" id="vExpo">1.20</span>
+      </div>
+    </div>
+
+    <!-- ── STROBE ── -->
+    <div class="tab-page" id="tab-strobe">
+      <div class="sec-lbl">Strobe Lights</div>
+      <div class="inline-row">
+        <button id="bStrobe" class="pill">OFF</button>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.1em">ENABLE STROBES</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Intensity</span>
+        <input type="range" id="sSIntens" min="10" max="800" value="150">
+        <span class="sl-val" id="vSIntens">150</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Freq /s</span>
+        <input type="range" id="sSFreq" min="1" max="200" value="20">
+        <span class="sl-val" id="vSFreq">2.0</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Falloff</span>
+        <input type="range" id="sSFall" min="1" max="500" value="80">
+        <span class="sl-val" id="vSFall">80</span>
+      </div>
+    </div>
+
+    <!-- ── SCENE ── -->
+    <div class="tab-page" id="tab-scene">
+      <div class="sec-lbl">Material</div>
+      <div class="sl-row">
+        <span class="sl-name">Roughness</span>
+        <input type="range" id="sRough" min="0" max="100" value="35">
+        <span class="sl-val" id="vRough">0.35</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">Metalness</span>
+        <input type="range" id="sMetal" min="0" max="100" value="10">
+        <span class="sl-val" id="vMetal">0.10</span>
+      </div>
+      <div class="sl-row">
+        <span class="sl-name">AO Radius</span>
+        <input type="range" id="sAO" min="0" max="150" value="35">
+        <span class="sl-val" id="vAO">0.35</span>
+      </div>
+      <div class="sec-lbl">Colors</div>
+      <div class="color-row">
+        <div class="color-item"><input type="color" id="cPart" value="#ffffff"> PARTICLE</div>
+        <div class="color-item"><input type="color" id="cBg"   value="#000000"> BG</div>
+      </div>
+    </div>
+
+  </div><!-- /sheet-panel -->
+</div><!-- /sheet-wrap -->
+
+<div id="status">AWAITING CAMERA</div>
+<div id="err">
+  <div>
+    <div style="font-size:22px;margin-bottom:12px">⚠</div>
+    CAMERA ACCESS REQUIRED<br>
+    <span id="errMsg" style="font-size:10px;opacity:.6"></span><br><br>
+    <button onclick="startCamera()" style="font:10px monospace;padding:6px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;cursor:pointer;letter-spacing:1px">RETRY</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Post-processing: EffectComposer + SSAOPass (graceful fallback if CDN unavailable) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/math/SimplexNoise.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+<script>
+(function () {
+'use strict';
+
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+var MAX_P  = 15000;  // max live particles
+var PW     = 90;     // processing canvas width  (portrait 9:16)
+var PH     = 160;    // processing canvas height
+var PLW    = 2.0;    // plane world-width  (9 units)
+var PLH    = PLW * 16.0 / 9.0;  // plane world-height (16 units ≈ 3.556)
+
+// ─── LIVE CONTROL STATE ──────────────────────────────────────────────────────
+var NUM_PLANES = 4;
+
+var C = {
+  edgeThresh  : 180,
+  rotSpeed    : 1.50,
+  emitRate    : 800,
+  partLife    : 3.0,
+  phaseOffset : 50 / 3 * Math.PI / 180,
+  planeScale  : 1.0,
+  partSize    : 0.5,
+  partArcOff  : 25 * Math.PI / 180,
+  strobeFreq   : 2.0,   // fires per second
+  strobeFall   : 80.0,  // intensity lost per second
+  strobeIntens : 150.0  // peak intensity per strobe
+};
+
+// ─── THREE.JS ────────────────────────────────────────────────────────────────
+var scene  = new THREE.Scene();
+var W = window.innerWidth, H = window.innerHeight;
+var camera = new THREE.PerspectiveCamera(55, W / H, 0.01, 100);
+camera.position.z = 5;
+
+var renderer = new THREE.WebGLRenderer({
+  canvas    : document.getElementById('canvas'),
+  antialias : true
+});
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 1);
+// PBR pipeline
+renderer.physicallyCorrectLights = true;
+renderer.toneMapping             = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure     = 1.2;
+renderer.outputEncoding          = THREE.sRGBEncoding;
+// Shadow maps
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+
+// ── Post-processing: EffectComposer + SSAO ───────────────────────────────────
+var composer = null, ssaoPass = null;
+try {
+  composer = new THREE.EffectComposer(renderer);
+  var renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  ssaoPass = new THREE.SSAOPass(scene, camera, W, H);
+  ssaoPass.kernelRadius  = 0.35;
+  ssaoPass.kernelSize    = 16;
+  ssaoPass.minDistance   = 0.001;
+  ssaoPass.maxDistance   = 0.10;
+  ssaoPass.output        = THREE.SSAOPass.OUTPUT.Default;
+  composer.addPass(ssaoPass);
+} catch(e) {
+  console.warn('SSAO unavailable, falling back to direct render:', e);
+  composer = null;
+  ssaoPass = null;
+}
+
+// ── Three-point light rig ────────────────────────────────────────────────────
+var hemiLight = new THREE.HemisphereLight(0x7799cc, 0x221108, 0.6);
+scene.add(hemiLight);
+
+// Key light — DirectionalLight so shadow map uses single ortho frustum (efficient)
+var keyLight = new THREE.DirectionalLight(0xfff4e0, 2.5);
+keyLight.position.set(-4, 8, 5);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.near   =  0.5;
+keyLight.shadow.camera.far    = 30;
+keyLight.shadow.camera.left   = -6;
+keyLight.shadow.camera.right  =  6;
+keyLight.shadow.camera.top    =  6;
+keyLight.shadow.camera.bottom = -6;
+keyLight.shadow.bias          = -0.0005;
+scene.add(keyLight);
+
+// Fill light — PointLight, no shadow (keep GPU cost low)
+var fillLight = new THREE.PointLight(0x5577cc, 20, 22, 2);
+fillLight.position.set(5, 4, 3);
+scene.add(fillLight);
+
+// Rim light — behind/below, purple-violet, edge separation
+var rimLight = new THREE.PointLight(0x7722bb, 30, 20, 2);
+rimLight.position.set(0, -2, -7);
+scene.add(rimLight);
+
+// ─── STROBE LIGHT POOL (3 PointLights, all start at intensity 0) ─────────────
+var strobeLights = [];
+for (var _si = 0; _si < 3; _si++) {
+  var _sl = new THREE.PointLight(0xffffff, 0, 30, 2);
+  scene.add(_sl);
+  strobeLights.push(_sl);
+}
+var strobesEnabled = false;
+var strobeAccum    = 0;
+var _nextStrobe    = 0; // rotating pointer into strobe pool
+
+// ─── INSTANCED SPHERE MESH ───────────────────────────────────────────────────
+var sphereGeo = new THREE.SphereGeometry(0.045, 10, 7);  // slightly more geo for PBR normals
+var sphereMat = new THREE.MeshStandardMaterial({
+  color     : 0xffffff,
+  roughness : 0.35,
+  metalness : 0.10
+});
+
+var iMesh = new THREE.InstancedMesh(sphereGeo, sphereMat, MAX_P);
+iMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+iMesh.count = 0;
+iMesh.castShadow    = true;
+iMesh.receiveShadow = true;
+scene.add(iMesh);
+
+var dummy = new THREE.Object3D();
+
+// ─── PARTICLE DATA (flat typed arrays for performance) ───────────────────────
+var pActive   = new Uint8Array(MAX_P);
+var pLX       = new Float32Array(MAX_P);  // local X on plane (plane-space)
+var pLY       = new Float32Array(MAX_P);  // local Y on plane (plane-space)
+var pPlane    = new Uint8Array(MAX_P);    // which plane (0–NUM_PLANES-1)
+var pArcOff   = new Float32Array(MAX_P);  // per-particle arc offset (radians along rotation)
+var pLife     = new Float32Array(MAX_P);
+var pMaxLife  = new Float32Array(MAX_P);
+var pLum      = new Float32Array(MAX_P);
+
+// ─── VIDEO & PROCESSING ──────────────────────────────────────────────────────
+var video     = document.getElementById('video');
+var procCvs   = document.getElementById('proc');
+var procCtx   = procCvs.getContext('2d');
+var grayBuf   = new Uint8Array(PW * PH);
+var blurBuf   = new Uint8Array(PW * PH);    // Gaussian-blurred gray (pre-Sobel)
+var gradX     = new Float32Array(PW * PH);  // Sobel X gradients  (for NMS)
+var gradY     = new Float32Array(PW * PH);  // Sobel Y gradients
+var edgeBuf   = new Float32Array(PW * PH);  // NMS-thinned edge magnitudes
+var videoReady  = false;
+var sourceMode  = 'camera';  // 'camera' | 'static'
+var staticReady = false;
+var srcCvs      = document.getElementById('srcCvs');
+var srcCtx2     = srcCvs.getContext('2d');
+
+// Edge texture canvas — written each frame, used as plane texture
+var edgeCvs    = document.getElementById('edgeCvs');
+var edgeCtx    = edgeCvs.getContext('2d');
+var edgeImgBuf = edgeCtx.createImageData(PW, PH);
+var edgeTexture = null; // assigned after plane setup below
+
+// Bright pixel list (UV + luminance) rebuilt each processing frame
+var brightPx = [];
+var brightLen = 0;
+
+function startCamera() {
+  document.getElementById('err').classList.remove('show');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showErr('getUserMedia not supported in this browser.');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({
+    video : { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+    audio : false
+  }).then(function (stream) {
+    video.srcObject = stream;
+    video.onloadedmetadata = function () {
+      video.play();
+      videoReady = true;
+      document.getElementById('status').textContent = 'RUNNING';
+    };
+  }).catch(function (e) {
+    showErr(e.name + ': ' + e.message);
+  });
+}
+
+function showErr(msg) {
+  document.getElementById('errMsg').textContent = msg;
+  document.getElementById('err').classList.add('show');
+  document.getElementById('status').textContent = 'ERROR';
+}
+
+// ─── FRAME PROCESSING (Sobel edge detect) ────────────────────────────────────
+function processFrame() {
+  if (sourceMode === 'camera') {
+    if (!videoReady || video.readyState < 2) return;
+    // Portrait centre-crop of the landscape camera feed
+    var vw = video.videoWidth  || 640;
+    var vh = video.videoHeight || 480;
+    var srcW = vh * (PW / PH);
+    var srcX = (vw - srcW) * 0.5;
+    if (srcX < 0) { srcX = 0; srcW = vw; }
+    procCtx.drawImage(video, srcX, 0, srcW, vh, 0, 0, PW, PH);
+  } else {
+    if (!staticReady) return;
+    procCtx.drawImage(srcCvs, 0, 0, PW, PH);
+  }
+  var raw = procCtx.getImageData(0, 0, PW, PH).data;
+
+  // ── 1. Greyscale (BT.601 luma) ───────────────────────────────────────────────
+  var i, r, g, b;
+  for (i = 0; i < PW * PH; i++) {
+    r = raw[i * 4]; g = raw[i * 4 + 1]; b = raw[i * 4 + 2];
+    grayBuf[i] = (r * 77 + g * 150 + b * 29) >> 8;
+  }
+
+  // ── 2. Gaussian 3×3 blur (kernel [1,2,1;2,4,2;1,2,1]/16) — reduces noise before Sobel
+  // Copy grayBuf → blurBuf first so border pixels aren't left at 0 (avoids false edge rectangle)
+  blurBuf.set(grayBuf);
+  var x, y, idx;
+  for (y = 1; y < PH - 1; y++) {
+    for (x = 1; x < PW - 1; x++) {
+      idx = y * PW + x;
+      blurBuf[idx] = (
+        grayBuf[(y-1)*PW+(x-1)] + 2*grayBuf[(y-1)*PW+x] + grayBuf[(y-1)*PW+(x+1)] +
+        2*grayBuf[y*PW+(x-1)]   + 4*grayBuf[y*PW+x]     + 2*grayBuf[y*PW+(x+1)]   +
+        grayBuf[(y+1)*PW+(x-1)] + 2*grayBuf[(y+1)*PW+x] + grayBuf[(y+1)*PW+(x+1)]
+      ) >> 4;
+    }
+  }
+
+  // ── 3. Sobel — run on blurred image, store gx/gy for NMS ─────────────────────
+  var gx, gy, mag;
+  for (y = 1; y < PH - 1; y++) {
+    for (x = 1; x < PW - 1; x++) {
+      idx = y * PW + x;
+      gx = (
+        -    blurBuf[(y-1)*PW+(x-1)] + blurBuf[(y-1)*PW+(x+1)]
+        - 2 * blurBuf[y*PW+(x-1)]    + 2*blurBuf[y*PW+(x+1)]
+        -    blurBuf[(y+1)*PW+(x-1)] + blurBuf[(y+1)*PW+(x+1)]
+      );
+      gy = (
+        -    blurBuf[(y-1)*PW+(x-1)] - 2*blurBuf[(y-1)*PW+x] - blurBuf[(y-1)*PW+(x+1)]
+        +    blurBuf[(y+1)*PW+(x-1)] + 2*blurBuf[(y+1)*PW+x] + blurBuf[(y+1)*PW+(x+1)]
+      );
+      gradX[idx] = gx;
+      gradY[idx] = gy;
+      edgeBuf[idx] = Math.sqrt(gx * gx + gy * gy);
+    }
+  }
+
+  // ── 4. Non-Maximum Suppression — thin edges to 1-pixel width (Canny-style) ───
+  var th = C.edgeThresh;
+  var angle, n1, n2;
+  brightLen = 0;
+
+  for (y = 1; y < PH - 1; y++) {
+    for (x = 1; x < PW - 1; x++) {
+      idx = y * PW + x;
+      mag = edgeBuf[idx];
+      if (mag === 0) continue;
+
+      // Gradient direction, quantised to 4 orientations (0°, 45°, 90°, 135°)
+      angle = Math.atan2(gradY[idx], gradX[idx]) * 57.296; // → degrees
+      angle = ((angle % 180) + 180) % 180; // fold to 0–180°
+
+      if (angle < 22.5 || angle >= 157.5) {          // horizontal edge
+        n1 = edgeBuf[y*PW + (x-1)]; n2 = edgeBuf[y*PW + (x+1)];
+      } else if (angle < 67.5) {                      // NE-SW diagonal
+        n1 = edgeBuf[(y-1)*PW+(x+1)]; n2 = edgeBuf[(y+1)*PW+(x-1)];
+      } else if (angle < 112.5) {                     // vertical edge
+        n1 = edgeBuf[(y-1)*PW+x]; n2 = edgeBuf[(y+1)*PW+x];
+      } else {                                         // NW-SE diagonal
+        n1 = edgeBuf[(y-1)*PW+(x-1)]; n2 = edgeBuf[(y+1)*PW+(x+1)];
+      }
+
+      // Keep only local maxima above threshold
+      if (mag >= n1 && mag >= n2 && mag > th) {
+        if (brightLen < 2000) {
+          if (!brightPx[brightLen]) brightPx[brightLen] = { u: 0, v: 0, lum: 0 };
+          brightPx[brightLen].u   = x / PW;
+          brightPx[brightLen].v   = y / PH;
+          brightPx[brightLen].lum = Math.min(mag / 400, 1.0);
+          brightLen++;
+        }
+      } else {
+        edgeBuf[idx] = 0; // suppress non-maxima so texture is also thinned
+      }
+    }
+  }
+
+  // Write Sobel magnitude to edge texture canvas (greyscale, boosted)
+  if (edgeTexture) {
+    var px = edgeImgBuf.data;
+    var j, val, raw;
+    for (j = 0; j < PW * PH; j++) {
+      raw = edgeBuf[j];
+      // Apply same threshold that drives particle emission
+      if (raw > C.edgeThresh) {
+        val = (raw * 1.5) | 0;
+        if (val > 255) val = 255;
+      } else {
+        val = 0;
+      }
+      px[j * 4]     = val;
+      px[j * 4 + 1] = val;
+      px[j * 4 + 2] = val;
+      px[j * 4 + 3] = 255;
+    }
+    edgeCtx.putImageData(edgeImgBuf, 0, 0);
+    edgeTexture.needsUpdate = true;
+  }
+}
+
+// ─── VISIBLE PLANE MESHES ────────────────────────────────────────────────────
+// CanvasTexture fed by the processed edge image each frame (shared across all planes)
+edgeTexture = new THREE.CanvasTexture(edgeCvs);
+edgeTexture.wrapS = THREE.ClampToEdgeWrapping;
+edgeTexture.repeat.set(-1, 1);   // flip U for front-facing camera
+edgeTexture.offset.set(1, 0);
+
+var planeGeo     = new THREE.PlaneGeometry(PLW, PLH, 1, 1);
+var planeWireGeo = new THREE.PlaneGeometry(PLW, PLH, 16, 12);
+var planeEdgeGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(PLW, PLH));
+
+// Shared materials — all 4 planes use the same texture + colour
+var planeTexMat = new THREE.MeshBasicMaterial({
+  map        : edgeTexture,
+  color      : 0x3366ff,
+  blending   : THREE.AdditiveBlending,
+  transparent: true,
+  depthWrite : false,
+  side       : THREE.DoubleSide
+});
+var planeWireMat = new THREE.MeshBasicMaterial({
+  color       : 0x3366ff,
+  wireframe   : true,
+  transparent : true,
+  opacity     : 0.10,
+  side        : THREE.DoubleSide,
+  depthWrite  : false
+});
+var planeEdgeMat = new THREE.LineBasicMaterial({
+  color       : 0x3366ff,
+  transparent : true,
+  opacity     : 0.65
+});
+
+// Build 4 plane groups — each rotates with a phase offset
+var planeGroups  = [];
+var planeAngles  = new Float32Array(NUM_PLANES);
+for (var _pi = 0; _pi < NUM_PLANES; _pi++) {
+  var pg = new THREE.Group();
+  pg.add(new THREE.Mesh(planeGeo,     planeTexMat));
+  pg.add(new THREE.Mesh(planeWireGeo, planeWireMat));
+  pg.add(new THREE.LineSegments(planeEdgeGeo, planeEdgeMat));
+  pg.visible = false;
+  scene.add(pg);
+  planeGroups.push(pg);
+}
+
+function setPlaneColor(hex) {
+  planeTexMat.color.set(hex);
+  planeWireMat.color.set(hex);
+  planeEdgeMat.color.set(hex);
+}
+function setPlanesVisible(v) {
+  for (var _i = 0; _i < NUM_PLANES; _i++) planeGroups[_i].visible = v;
+}
+
+// ─── PARTICLE EMISSION ───────────────────────────────────────────────────────
+var emitAccum = 0;
+var planeTime = 0;
+
+var _freePtr = 0;
+function findFree() {
+  var start = _freePtr;
+  do {
+    if (!pActive[_freePtr]) return _freePtr;
+    _freePtr = (_freePtr + 1) % MAX_P;
+  } while (_freePtr !== start);
+  return -1;
+}
+
+function emitOne() {
+  if (brightLen === 0) return;
+  var idx = findFree();
+  if (idx < 0) return;
+
+  var bp = brightPx[Math.floor(Math.random() * brightLen)];
+
+  // Store position in plane-local space (plane lies in XY, normal = Z)
+  pLX[idx]  = (bp.u - 0.5) * PLW;
+  pLY[idx]  = (0.5 - bp.v) * PLH;
+  // Distribute new particles across all planes
+  pPlane[idx]   = (Math.random() * NUM_PLANES) | 0;
+  // Random arc offset within ±partArcOff — bakes in at birth so particle stays at fixed arc position
+  pArcOff[idx]  = (Math.random() * 2 - 1) * C.partArcOff;
+  pLife[idx]    = C.partLife;
+  pMaxLife[idx] = C.partLife;
+  pLum[idx]     = bp.lum;
+  pActive[idx]  = 1;
+  _freePtr      = (idx + 1) % MAX_P;
+}
+
+// ─── MAIN LOOP ───────────────────────────────────────────────────────────────
+var lastT  = 0;
+var frameN = 0;
+
+function animate(now) {
+  requestAnimationFrame(animate);
+
+  var dt = Math.min((now - lastT) * 0.001, 0.05);
+  if (dt <= 0) { lastT = now; return; }
+  lastT = now;
+
+  // Process camera every other frame to save CPU
+  if ((++frameN & 1) === 0) processFrame();
+
+  // Advance shared time, then compute per-plane Y rotation with phase offsets
+  planeTime += dt * C.rotSpeed;
+  var s = C.planeScale;
+  for (var pi = 0; pi < NUM_PLANES; pi++) {
+    planeAngles[pi] = (1.0 - Math.cos(planeTime + pi * C.phaseOffset)) * Math.PI * 0.5;
+    planeGroups[pi].rotation.y = planeAngles[pi];
+    planeGroups[pi].scale.setScalar(s);
+  }
+
+  // Emission — spread across all planes
+  emitAccum += C.emitRate * dt;
+  var toEmit = emitAccum | 0;
+  emitAccum -= toEmit;
+  for (var e = 0; e < toEmit; e++) emitOne();
+
+  // Update particles & fill instance buffer
+  // Particles are fixed to their plane: world pos = rotate local (lx, ly, 0) by plane Y angle
+  var live = 0, i, alpha, sc, ca, sa, a;
+  for (i = 0; i < MAX_P; i++) {
+    if (!pActive[i]) continue;
+
+    pLife[i] -= dt;
+    if (pLife[i] <= 0) { pActive[i] = 0; continue; }
+
+    // Transform local plane coords → world position (add per-particle arc offset)
+    a  = planeAngles[pPlane[i]] + pArcOff[i];
+    ca = Math.cos(a); sa = Math.sin(a);
+
+    // Scale: fade out over lifetime, size weighted by edge luminance + user size multiplier
+    alpha = pLife[i] / pMaxLife[i];
+    sc    = alpha * (0.35 + pLum[i] * 0.65) * s * C.partSize;
+
+    dummy.position.set(pLX[i] * ca * s, pLY[i] * s, -pLX[i] * sa * s);
+    dummy.rotation.y = a;
+    dummy.scale.setScalar(sc);
+    dummy.updateMatrix();
+    iMesh.setMatrixAt(live, dummy.matrix);
+    live++;
+  }
+
+  iMesh.count = live;
+  iMesh.instanceMatrix.needsUpdate = true;
+
+  // ── Strobes ─────────────────────────────────────────────────────────────────
+  if (strobesEnabled) {
+    // Decay all active strobes
+    for (var _sd = 0; _sd < strobeLights.length; _sd++) {
+      strobeLights[_sd].intensity = Math.max(0, strobeLights[_sd].intensity - C.strobeFall * dt);
+    }
+    // Fire new strobes on interval
+    strobeAccum += dt;
+    var _sInterval = 1.0 / C.strobeFreq;
+    while (strobeAccum >= _sInterval) {
+      strobeAccum -= _sInterval;
+      var _sl2 = strobeLights[_nextStrobe % strobeLights.length];
+      _nextStrobe++;
+      // Random position on a sphere around the scene
+      var _sTheta = Math.random() * Math.PI * 2;
+      var _sPhi   = Math.acos(2 * Math.random() - 1);
+      _sl2.position.set(
+        Math.sin(_sPhi) * Math.cos(_sTheta) * 9,
+        Math.sin(_sPhi) * Math.sin(_sTheta) * 9,
+        Math.cos(_sPhi) * 9
+      );
+      // Pick a random color from the three light colours
+      var _sColors = [keyLight.color, fillLight.color, rimLight.color];
+      _sl2.color.copy(_sColors[(_nextStrobe % 3)]);
+      _sl2.intensity = C.strobeIntens;
+    }
+  } else {
+    // Make sure all strobes are off when disabled
+    for (var _sd2 = 0; _sd2 < strobeLights.length; _sd2++) strobeLights[_sd2].intensity = 0;
+  }
+
+  if (composer) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+function bind(id, fn) {
+  document.getElementById(id).addEventListener('input', fn);
+}
+
+bind('sEdge', function () {
+  C.edgeThresh = +this.value;
+  document.getElementById('vEdge').textContent = this.value;
+});
+
+bind('sRot', function () {
+  C.rotSpeed = this.value / 100;
+  document.getElementById('vRot').textContent = C.rotSpeed.toFixed(2);
+});
+
+bind('sEmit', function () {
+  C.emitRate = +this.value;
+  document.getElementById('vEmit').textContent = this.value;
+});
+
+bind('sLife', function () {
+  C.partLife = this.value / 10;
+  document.getElementById('vLife').textContent = C.partLife.toFixed(1);
+});
+
+bind('sPSize', function () {
+  C.partSize = this.value / 100;
+  document.getElementById('vPSize').textContent = C.partSize.toFixed(1);
+});
+
+bind('sArcOff', function () {
+  C.partArcOff = this.value * Math.PI / 180;
+  document.getElementById('vArcOff').textContent = this.value;
+});
+
+bind('sPhase', function () {
+  C.phaseOffset = this.value * Math.PI / 180;
+  document.getElementById('vPhase').textContent = this.value;
+});
+
+bind('sPScale', function () {
+  C.planeScale = this.value / 100;
+  document.getElementById('vPScale').textContent = C.planeScale.toFixed(1);
+});
+
+document.getElementById('bPlane').addEventListener('click', function () {
+  var v = !planeGroups[0].visible;
+  setPlanesVisible(v);
+  this.textContent = v ? 'ON' : 'OFF';
+  this.classList.toggle('on', v);
+});
+
+document.getElementById('cPlane').addEventListener('input', function () {
+  setPlaneColor(this.value);
+});
+
+bind('sExpo', function () {
+  renderer.toneMappingExposure = this.value / 100;
+  document.getElementById('vExpo').textContent = (this.value / 100).toFixed(2);
+});
+
+bind('sRough', function () {
+  sphereMat.roughness = this.value / 100;
+  document.getElementById('vRough').textContent = (this.value / 100).toFixed(2);
+});
+
+bind('sMetal', function () {
+  sphereMat.metalness = this.value / 100;
+  document.getElementById('vMetal').textContent = (this.value / 100).toFixed(2);
+});
+
+bind('sAO', function () {
+  var v = this.value / 100;
+  document.getElementById('vAO').textContent = v.toFixed(2);
+  if (ssaoPass) ssaoPass.kernelRadius = v;
+});
+
+// Light brightness
+bind('sKeyB', function () {
+  keyLight.intensity = this.value / 10;
+  document.getElementById('vKeyB').textContent = (this.value / 10).toFixed(1);
+});
+bind('sFillB', function () {
+  fillLight.intensity = +this.value;
+  document.getElementById('vFillB').textContent = this.value;
+});
+bind('sRimB', function () {
+  rimLight.intensity = +this.value;
+  document.getElementById('vRimB').textContent = this.value;
+});
+
+// Light colors
+document.getElementById('cLight').addEventListener('input', function () { keyLight.color.set(this.value); });
+document.getElementById('cFill').addEventListener('input',  function () { fillLight.color.set(this.value); });
+document.getElementById('cRim').addEventListener('input',   function () { rimLight.color.set(this.value); });
+document.getElementById('cPart').addEventListener('input',  function () { sphereMat.color.set(this.value); });
+document.getElementById('cBg').addEventListener('input',    function () { renderer.setClearColor(new THREE.Color(this.value), 1); });
+
+// Strobes
+document.getElementById('bStrobe').addEventListener('click', function () {
+  strobesEnabled = !strobesEnabled;
+  strobeAccum = 0;
+  this.textContent = strobesEnabled ? 'ON' : 'OFF';
+  this.classList.toggle('on', strobesEnabled);
+});
+bind('sSIntens', function () {
+  C.strobeIntens = +this.value;
+  document.getElementById('vSIntens').textContent = this.value;
+});
+bind('sSFreq', function () {
+  C.strobeFreq = this.value / 10;
+  document.getElementById('vSFreq').textContent = C.strobeFreq.toFixed(1);
+});
+bind('sSFall', function () {
+  C.strobeFall = +this.value;
+  document.getElementById('vSFall').textContent = this.value;
+});
+
+// Source selection
+document.getElementById('srcBtn').addEventListener('click', function () {
+  document.getElementById('srcPanel').classList.toggle('hide');
+});
+
+function setActiveSource(id) {
+  ['optCamera','optPhoto','optFile'].forEach(function (oid) {
+    document.getElementById(oid).classList.toggle('active', oid === id);
+  });
+  document.getElementById('srcPanel').classList.add('hide');
+}
+
+document.getElementById('optCamera').addEventListener('click', function () {
+  sourceMode = 'camera';
+  setActiveSource('optCamera');
+  startCamera();
+});
+
+document.getElementById('optPhoto').addEventListener('click', function () {
+  setActiveSource('optPhoto');
+  // Capture current video frame into srcCvs
+  if (!videoReady) { sourceMode = 'camera'; return; }
+  srcCvs.width  = 90; srcCvs.height = 160;
+  var vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  var sw = vh * (PW / PH), sx = (vw - sw) * 0.5;
+  if (sx < 0) { sx = 0; sw = vw; }
+  srcCtx2.drawImage(video, sx, 0, sw, vh, 0, 0, PW, PH);
+  staticReady = true;
+  sourceMode = 'static';
+  document.getElementById('status').textContent = 'PHOTO';
+});
+
+document.getElementById('optFile').addEventListener('click', function () {
+  document.getElementById('fileIn').click();
+});
+
+document.getElementById('fileIn').addEventListener('change', function () {
+  var file = this.files[0];
+  if (!file) return;
+  setActiveSource('optFile');
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function () {
+    srcCvs.width  = PW; srcCvs.height = PH;
+    // Stretch to fill plane exactly
+    srcCtx2.drawImage(img, 0, 0, PW, PH);
+    URL.revokeObjectURL(url);
+    staticReady = true;
+    sourceMode = 'static';
+    document.getElementById('status').textContent = 'IMAGE';
+  };
+  img.src = url;
+  this.value = '';
+});
+
+// Sheet open/close
+var sheet = document.getElementById('sheet-wrap');
+document.getElementById('toggle').addEventListener('click', function () {
+  sheet.classList.toggle('open');
+});
+document.getElementById('drag-handle').addEventListener('click', function () {
+  sheet.classList.remove('open');
+});
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var tab = this.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-page').forEach(function (p) { p.classList.remove('active'); });
+    this.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  });
+});
+
+window.addEventListener('resize', function () {
+  var w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  if (composer) composer.setSize(w, h);
+});
+
+// ─── GO ──────────────────────────────────────────────────────────────────────
+document.getElementById('status').textContent = 'TAP ⊙ SOURCE TO BEGIN';
+requestAnimationFrame(animate);
+
+}());
+</script>
 </body>
 </html>

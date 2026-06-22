@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<!--
+    ASCII Particle Emitter
+    Built with Claude.ai
+    Based on Blob Tracking by @pbltrr
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Particle Emitter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0b0b;
+            --panel-bg: rgba(12, 12, 12, 0.95);
+            --text-main: #e5e5e5;
+            --text-muted: #666666;
+            --accent: #d4d4d4;
+            --active-bg: rgba(255, 255, 255, 0.05);
+            --slider-track: #2a2a2a;
+            --slider-thumb: #cfcfcf;
+            --btn-hover: rgba(255, 255, 255, 0.1);
+            --btn-active-bg: #e5e5e5;
+            --btn-active-text: #0b0b0b;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Manrope', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 1;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 24px; left: 24px;
+            width: 280px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.05);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            transition: all 0.3s ease;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        .header-section {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 20px 20px 12px 20px;
+            border-bottom: 1px solid #222;
+            background: var(--panel-bg);
+            position: relative;
+            z-index: 1;
+        }
+
+        #ui-controls {
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px 20px 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        #ui-controls::-webkit-scrollbar { width: 4px; }
+        #ui-controls::-webkit-scrollbar-track { background: transparent; }
+        #ui-controls::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        #ui-controls::-webkit-scrollbar-thumb:hover { background: #555; }
+        #ui-controls.collapsed { display: none; }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        h1 .title-by {
+            display: block;
+            text-transform: none;
+            font-weight: 400;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        h1 a { color: #999; text-decoration: none; transition: color 0.2s; }
+        h1 a:hover { color: var(--text-main); }
+
+        .subtitle {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .value-input {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            font-family: 'Manrope', sans-serif;
+            font-size: 10px;
+            text-align: right;
+            width: 40px;
+            padding: 0;
+            outline: none;
+            cursor: text;
+            -moz-appearance: textfield;
+        }
+        .value-input:hover, .value-input:focus {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+        .value-input::-webkit-outer-spin-button,
+        .value-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .control-group {
+            margin-bottom: 0;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background-color 0.1s;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: var(--slider-track);
+            border: none;
+            border-radius: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px; width: 8px;
+            background: var(--slider-thumb);
+            border: none;
+            border-radius: 1px;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover { background: #fff; transform: scale(1.1); }
+        input[type="range"]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.1); }
+        input[type="range"]:focus { outline: none; }
+
+        .selector-row {
+            display: flex;
+            width: 100%;
+            gap: 1px;
+            background: var(--slider-track);
+            padding: 1px;
+            border-radius: 2px;
+        }
+
+        .selector-btn {
+            flex: 1;
+            background: var(--panel-bg);
+            border: none;
+            color: var(--text-muted);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-family: inherit;
+        }
+
+        .selector-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        .selector-btn.active { background: var(--btn-active-bg); color: var(--btn-active-text); }
+
+        .source-row {
+            display: flex;
+            gap: 6px;
+        }
+        .source-row > * { flex: 1; min-width: 0; }
+
+        #file-input-container {
+            border: 1px dashed var(--slider-track);
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0,0,0,0.2);
+            position: relative;
+        }
+        #file-input-container:hover { border-color: var(--text-muted); background: rgba(255,255,255,0.02); }
+
+        input[type="file"] { display: none; }
+
+        .upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .icon { width: 12px; height: 12px; fill: var(--text-muted); }
+
+        #file-name {
+            margin-top: 6px;
+            font-size: 9px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #webcam-btn {
+            border: 1px dashed var(--slider-track);
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+            font-family: inherit;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        #webcam-btn:hover { border-color: var(--text-muted); background: rgba(255,255,255,0.02); color: var(--text-main); }
+        #webcam-btn.active { border-color: var(--text-main); background: rgba(255,255,255,0.05); color: var(--text-main); }
+        #webcam-btn svg { width: 12px; height: 12px; fill: currentColor; }
+
+        .cam-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cam-sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+        #toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.55;
+            transition: opacity 0.2s, background 0.2s;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            min-width: 26px; min-height: 26px;
+        }
+        #toggle-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+        #toggle-btn svg { width: 14px; height: 14px; fill: var(--text-main); transition: transform 0.3s ease; }
+        #toggle-btn.rotated svg { transform: rotate(180deg); }
+
+        #flip-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.55;
+            transition: opacity 0.2s, background 0.2s;
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            min-width: 26px; min-height: 26px;
+        }
+        #flip-btn.visible { display: flex; }
+        #flip-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+        #flip-btn .material-symbols-outlined {
+            font-size: 16px; line-height: 1;
+            color: var(--text-main);
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            user-select: none;
+        }
+
+        .playback-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .action-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--slider-track);
+            color: var(--text-main);
+            padding: 8px;
+            flex: 1;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .action-btn:hover { background: var(--btn-hover); border-color: var(--text-muted); }
+        .action-btn svg { fill: var(--text-main); width: 10px; height: 10px; }
+
+        /* Custom glyph input */
+        .glyph-input-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .glyph-input-wrap label { margin-bottom: 0; }
+        #custom-glyphs {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--slider-track);
+            color: var(--text-main);
+            font-family: monospace;
+            font-size: 13px;
+            padding: 7px 9px;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+            letter-spacing: 3px;
+            transition: border-color 0.2s;
+        }
+        #custom-glyphs:focus { border-color: var(--text-muted); }
+        #custom-glyphs::placeholder { color: #444; letter-spacing: 1px; font-size: 10px; }
+
+        .glyph-hint {
+            font-size: 9px;
+            color: #444;
+            font-family: 'Manrope', sans-serif;
+        }
+
+        /* Palette buttons */
+        .selector-btn[data-value="cyber"].active  { background: #001a14; color: #00ffd2; }
+        .selector-btn[data-value="red"].active    { background: #1a0000; color: #ff1414; }
+        .selector-btn[data-value="green"].active  { background: #0d1a00; color: #a0ff00; }
+        .selector-btn[data-value="mono"].active   { background: #1a1a1a; color: #e6e6e6; }
+
+        .section-divider {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #333;
+            padding: 4px 8px 0;
+            border-top: 1px solid #1a1a1a;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-container">
+    <div class="header-section">
+        <div class="title-row">
+            <h1>ASCII Emitter<span class="title-by">a Br_St.GFX experiment</span></h1>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-top:1px;">
+                <div id="flip-btn" title="Flip Camera">
+                    <span class="material-symbols-outlined">flip_camera_android</span>
+                </div>
+                <div id="toggle-btn" title="Toggle Controls">
+                    <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-controls">
+
+        <div class="subtitle">Luminance-driven ASCII particle field</div>
+
+        <div class="source-row">
+            <div id="file-input-container" onclick="document.getElementById('videoUpload').click()">
+                <div class="upload-label">
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M19 13v5c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-5c0-.55-.45-1-1-1s-1 .45-1 1v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6c0-.55-.45-1-1-1s-1 .45-1 1zm-7-9.41l2.29 2.29c.39.39 1.02.39 1.41 0s.39-1.02 0-1.41l-4-4a.9959.9959 0 0 0-1.41 0l-4 4c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0L11 3.59V15c0 .55.45 1 1 1s1-.45 1-1V3.59z"/>
+                    </svg>
+                    Upload
+                </div>
+                <div id="file-name">mp4 or mov</div>
+                <input type="file" id="videoUpload" accept="video/mp4,video/quicktime,video/webm">
+            </div>
+            <button id="webcam-btn" title="Use Webcam">
+                <div class="cam-label">
+                    <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    Camera
+                </div>
+                <div class="cam-sub" id="cam-sub-text">webcam or mobile</div>
+            </button>
+        </div>
+
+        <!-- Glyphs -->
+        <div class="section-divider">Glyphs</div>
+
+        <div class="control-group">
+            <label>Glyph Set</label>
+            <div class="selector-row" id="glyph-set-buttons">
+                <button class="selector-btn active" data-value="box">BOX</button>
+                <button class="selector-btn" data-value="braille">BRAILLE</button>
+                <button class="selector-btn" data-value="kata">KATA</button>
+                <button class="selector-btn" data-value="custom">CUSTOM</button>
+            </div>
+        </div>
+
+        <div class="control-group glyph-input-wrap" id="custom-glyph-group" style="display:none;">
+            <label>Custom Characters</label>
+            <input type="text" id="custom-glyphs" maxlength="64" placeholder="paste any unicode glyphs…">
+            <div class="glyph-hint">Each character = one possible particle glyph</div>
+        </div>
+
+        <!-- Emission -->
+        <div class="section-divider">Emission</div>
+
+        <div class="control-group">
+            <label>Grid Size <input type="number" class="value-input" id="val-grid" value="18"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-grid" min="4" max="60" value="18" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Emit Rate <input type="number" class="value-input" id="val-rate" value="40"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-rate" min="1" max="100" value="40" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Luma Thresh <input type="number" class="value-input" id="val-luma" value="18"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-luma" min="0" max="100" value="18" step="1">
+            </div>
+        </div>
+
+        <!-- Motion -->
+        <div class="section-divider">Motion</div>
+
+        <div class="control-group">
+            <label>Speed <input type="number" class="value-input" id="val-speed" value="55"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-speed" min="1" max="100" value="55" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Z Spread <input type="number" class="value-input" id="val-spread" value="40"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-spread" min="1" max="100" value="40" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Drift <input type="number" class="value-input" id="val-drift" value="20"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-drift" min="0" max="100" value="20" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Lifespan <input type="number" class="value-input" id="val-life" value="60"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-life" min="10" max="100" value="60" step="1">
+            </div>
+        </div>
+
+        <!-- Visual -->
+        <div class="section-divider">Visual</div>
+
+        <div class="control-group">
+            <label>Palette</label>
+            <div class="selector-row" id="palette-buttons">
+                <button class="selector-btn active" data-value="cyber">CYBER</button>
+                <button class="selector-btn" data-value="red">RED</button>
+                <button class="selector-btn" data-value="green">GREEN</button>
+                <button class="selector-btn" data-value="mono">MONO</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Mosaic <input type="number" class="value-input" id="val-mosaic" value="85"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-mosaic" min="0" max="100" value="85" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Glow <input type="number" class="value-input" id="val-glow" value="0"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-glow" min="0" max="100" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Dither <input type="number" class="value-input" id="val-dither" value="70"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-dither" min="0" max="100" value="70" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Scanlines <input type="number" class="value-input" id="val-scanlines" value="40"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-scanlines" min="0" max="100" value="40" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Brightness <input type="number" class="value-input" id="val-bright" value="90"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-bright" min="10" max="100" value="90" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Trail <input type="number" class="value-input" id="val-trail" value="0"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-trail" min="0" max="80" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Max Particles <input type="number" class="value-input" id="val-maxp" value="60"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-maxp" min="10" max="100" value="60" step="1">
+            </div>
+        </div>
+
+        <!-- Camera -->
+        <div class="section-divider">Camera</div>
+
+        <div class="control-group">
+            <label>Cam Dist <input type="number" class="value-input" id="val-camdist" value="50"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-camdist" min="0" max="100" value="50" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>FOV <input type="number" class="value-input" id="val-fov" value="60"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-fov" min="15" max="140" value="60" step="1">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Opt. Comp <input type="number" class="value-input" id="val-optcomp" value="0"></label>
+            <div class="slider-wrapper">
+                <input type="range" id="slider-optcomp" min="-100" max="100" value="0" step="1">
+            </div>
+        </div>
+
+        <div class="playback-row">
+            <button id="btn-play" class="action-btn">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button id="btn-restart" class="action-btn">
+                <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                Restart
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+'use strict';
+// ─── State ────────────────────────────────────────────────────────────────────
+let videoEl = null, videoLoaded = false, videoPlaying = false;
+let usingWebcam = false, facingMode = 'user';
+let particles = [];
+
+const GLYPH_SETS = {
+    box:     [' ','☐','+','⊞','⊠','✕'],
+    braille: ['⠁','⠃','⠇','⠏','⠟','⠿','⣿','⠛','⠓','⠋','⠎','⠗','⠙','⠝','⠞','⣤','⣶','⣿'],
+    kata:    ['ｦ','ｧ','ｨ','ｩ','ｪ','ｫ','ｬ','ｭ','ｮ','ｯ','ｱ','ｲ','ｳ','ｴ','ｵ','ｶ','ｷ','ｸ','ｹ','ｺ','ｻ','ｼ','ｽ','ｾ','ｿ','ﾀ','ﾁ','ﾂ','ﾃ','ﾄ','ﾅ','ﾆ','ﾇ','ﾈ','ﾉ','ﾊ','ﾋ','ﾌ','ﾍ','ﾎ','ﾏ','ﾐ','ﾑ','ﾒ','ﾓ','ﾔ','ﾕ','ﾖ','ﾗ','ﾘ','ﾙ','ﾚ','ﾛ','ﾜ','ﾝ'],
+};
+let glyphSetKey = 'box';
+let customGlyphs = [];
+
+let P = {
+    grid:14, rate:40, luma:30, speed:50, spread:50, drift:30,
+    life:70, bright:90, trail:0, maxp:60, mosaic:85,
+    dither:70, scanlines:40, glow:0,
+    fov:60, optcomp:0, camdist:50
+};
+
+const PALETTES = {
+    cyber: { a:[0,255,210],   b:[180,0,255]  },
+    red:   { a:[255,20,20],   b:[180,0,0]    },
+    green: { a:[160,255,0],   b:[0,120,30]   },
+    mono:  { a:[230,230,230], b:[80,80,80]   },
+};
+let paletteKey = 'cyber';
+
+// 3 discrete layers: FAR=0, MID=1, NEAR=2
+// Wide z-separation so perspective scale difference is very visible
+const NUM_LAYERS = 3;
+const LAYER_Z    = [0.15, 0.55, 0.88]; // far → near
+
+// Mosaic cell data rebuilt every sample
+let mosaicCells = []; // raw cell data for distorted drawing
+let lastEmitTime = 0;
+
+const BAYER4 = [
+    [ 0/16,  8/16,  2/16, 10/16],
+    [12/16,  4/16, 14/16,  6/16],
+    [ 3/16, 11/16,  1/16,  9/16],
+    [15/16,  7/16, 13/16,  5/16]
+];
+
+// ─── Camera / projection ──────────────────────────────────────────────────────
+// Projects world point (wx, wy) at depth z [0=far,1=near] to screen coords.
+// The mosaic base plane sits at z=0 (identity for mosaic, just optical warp).
+// Optical comp is 2× stronger for mosaic vs particles.
+function projectPoint(wx, wy, z, optStrength) {
+    const fovRad   = (P.fov * Math.PI) / 180;
+    const focalLen = (width * 0.5) / Math.tan(fovRad * 0.5);
+    // camdist: 0=very close (extreme z-scale), 100=very far (flat/telephoto feel)
+    const depthScale = map(P.camdist, 0, 100, 8.0, 0.8);
+    const zDepth   = constrain(1.0 - z, 0.02, 0.99);
+    const scale    = focalLen / (focalLen + zDepth * focalLen * depthScale);
+
+    const cx = width  * 0.5;
+    const cy = height * 0.5;
+    let sx = cx + (wx - cx) * scale;
+    let sy = cy + (wy - cy) * scale;
+
+    // Optical compensation — strength multiplier lets mosaic get stronger warp
+    if (P.optcomp !== 0) {
+        const k  = map(P.optcomp, -100, 100, -0.9, 0.9) * optStrength;
+        const dx = (sx - cx) / (width  * 0.5);
+        const dy = (sy - cy) / (height * 0.5);
+        const r2 = dx*dx + dy*dy;
+        sx = cx + (sx - cx) * (1 + k * r2);
+        sy = cy + (sy - cy) * (1 + k * r2);
+    }
+    return { sx, sy, scale };
+}
+
+// Mosaic cells at z=0 but still affected by FOV scale + optical warp (2× strength)
+function projectMosaic(wx, wy) {
+    return projectPoint(wx, wy, 0.0, 2.0);
+}
+
+// Particle projection — standard strength
+function projectParticle(wx, wy, z) {
+    return projectPoint(wx, wy, z, 1.0);
+}
+
+// ─── Color helpers ────────────────────────────────────────────────────────────
+function paletteKey3(luma, gx, gy) {
+    const ds  = map(P.dither, 0, 100, 0, 0.55);
+    const q   = luma + BAYER4[gy & 3][gx & 3] * ds;
+    if (q < 0.18) return 'black';
+    if (q < 0.52) return 'b';
+    return 'a';
+}
+
+function paletteRGB(key) {
+    if (key === 'black') return [0, 0, 0];
+    return PALETTES[paletteKey][key];
+}
+
+// Particles: dark source → bright palette color; bright source → dim/black
+function particleColor(luma) {
+    const pal    = PALETTES[paletteKey];
+    const inv    = 1 - luma;                           // dark pixel → inv near 1
+    const bScale = map(P.bright, 10, 100, 0.3, 1.0);
+    // Blend between palette.a (brightest) and palette.b weighted by darkness
+    return [
+        lerp(pal.b[0], pal.a[0], inv) * bScale,
+        lerp(pal.b[1], pal.a[1], inv) * bScale,
+        lerp(pal.b[2], pal.a[2], inv) * bScale
+    ];
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ─── Mosaic: build projected quads, then horizontal-run merge ─────────────────
+// Each cell stores its projected screen corner (top-left) and the merged run
+// width after color-grouping.
+function buildAndDrawMosaic(cells, cellsX, cellsY, worldCW, worldCH, mAlpha) {
+    if (mAlpha < 2) return;
+    noStroke();
+    rectMode(CORNER);
+
+    // Draw row by row, merging consecutive same-colour cells into single rects.
+    // Because the mosaic is now distorted, we can only safely merge cells whose
+    // projected corners are exactly flush — i.e. same row, same color key.
+    // We draw each merged run as a single rect from leftmost projected x to
+    // rightmost projected x+w, at the projected y of that row.
+    for (let gy = 0; gy < cellsY; gy++) {
+        let gx = 0;
+        while (gx < cellsX) {
+            const c0 = cells[gy * cellsX + gx];
+            if (!c0) { gx++; continue; }
+
+            const startKey = c0.colKey;
+            // Extend run rightward while same color
+            let runEnd = gx + 1;
+            while (runEnd < cellsX) {
+                const nc = cells[gy * cellsX + runEnd];
+                if (!nc || nc.colKey !== startKey) break;
+                runEnd++;
+            }
+
+            // Project left edge of first cell and right edge of last cell
+            const firstWX = c0.wx - worldCW * 0.5;
+            const lastCell = cells[gy * cellsX + (runEnd - 1)];
+            const lastWX  = lastCell.wx + worldCW * 0.5;
+
+            const { sx: x0, sy: y0 } = projectMosaic(firstWX,      c0.wy - worldCH * 0.5);
+            const { sx: x1          } = projectMosaic(lastWX,       c0.wy - worldCH * 0.5);
+            const { sy: y1          } = projectMosaic(firstWX,      c0.wy + worldCH * 0.5);
+
+            const rw = x1 - x0;
+            const rh = y1 - y0;
+            if (rw <= 0 || rh <= 0) { gx = runEnd; continue; }
+
+            const [cr, cg, cb] = paletteRGB(startKey);
+            fill(cr, cg, cb, mAlpha);
+            rect(x0, y0, rw, rh);
+
+            gx = runEnd;
+        }
+    }
+}
+
+// ─── Glow pass ────────────────────────────────────────────────────────────────
+// Draw the mosaic again at large blur via a semi-transparent oversized rect pass.
+// p5.js has no native blur, so we fake it with 3 additive passes at expanding sizes.
+function drawGlow(cells, cellsX, cellsY, worldCW, worldCH) {
+    const glowAmt = map(P.glow, 0, 100, 0, 60);
+    if (glowAmt < 1) return;
+
+    const passes = 3;
+    for (let pass = 1; pass <= passes; pass++) {
+        const expand = (glowAmt / passes) * pass;
+        const alpha  = map(pass, 1, passes, 40, 8);
+        noStroke();
+        rectMode(CORNER);
+        for (let gy = 0; gy < cellsY; gy++) {
+            let gx = 0;
+            while (gx < cellsX) {
+                const c0 = cells[gy * cellsX + gx];
+                if (!c0) { gx++; continue; }
+                const startKey = c0.colKey;
+                if (startKey === 'black') { gx++; continue; } // don't glow black
+                let runEnd = gx + 1;
+                while (runEnd < cellsX) {
+                    const nc = cells[gy * cellsX + runEnd];
+                    if (!nc || nc.colKey !== startKey) break;
+                    runEnd++;
+                }
+                const lastCell = cells[gy * cellsX + (runEnd - 1)];
+                const { sx: x0, sy: y0 } = projectMosaic(c0.wx - worldCW*0.5,      c0.wy - worldCH*0.5);
+                const { sx: x1          } = projectMosaic(lastCell.wx + worldCW*0.5, c0.wy - worldCH*0.5);
+                const {          sy: y1 } = projectMosaic(c0.wx - worldCW*0.5,      c0.wy + worldCH*0.5);
+                const rw = x1 - x0, rh = y1 - y0;
+                if (rw <= 0 || rh <= 0) { gx = runEnd; continue; }
+                const [cr, cg, cb] = paletteRGB(startKey);
+                fill(cr, cg, cb, alpha);
+                rect(x0 - expand, y0 - expand, rw + expand*2, rh + expand*2);
+                gx = runEnd;
+            }
+        }
+    }
+}
+
+// ─── Particle class ───────────────────────────────────────────────────────────
+class ASCIIParticle {
+    constructor(wx, wy, luma, col, layerIdx, gridCW, gridCH) {
+        this.wx      = wx;
+        this.wy      = wy;
+        this.luma    = luma;
+        this.srcCol  = col;
+        this.layer   = layerIdx;   // 0=FAR, 1=MID, 2=NEAR
+        this.gridCW  = gridCW;
+        this.gridCH  = gridCH;
+
+        // Cardinal drift in grid-cell units
+        this.driftGX = 0;
+        this.driftGY = 0;
+
+        // Glyph — darker pixels get denser chars (inv of luma for density)
+        const inv        = 1 - luma;
+        const glyphs     = this._glyphs();
+        const densityIdx = floor(map(inv, 0, 1, 0, glyphs.length - 1));
+        const idx        = constrain(densityIdx + floor(random(-1, 2)), 0, glyphs.length - 1);
+        this.glyph       = glyphs[idx];
+        // Font size: dark (small) → bright not an issue since dark emits more
+        this.baseFontSize = map(inv, 0, 1, 8, 32);
+
+        this.stepsToLive    = NUM_LAYERS - layerIdx;
+        this.stepsDone      = 0;
+        this.lastStepFrame  = frameCount;
+        this.lastDriftFrame = frameCount;
+    }
+
+    _glyphs() {
+        if (glyphSetKey === 'custom' && customGlyphs.length > 0) return customGlyphs;
+        return GLYPH_SETS[glyphSetKey] || GLYPH_SETS.box;
+    }
+
+    _stepInterval() {
+        // Dark pixels move faster (they emit more, keeping density balanced)
+        const darkBoost = map(this.luma, 0, 1, 1.4, 0.6); // dark=fast
+        return map(P.speed, 1, 100, 80, 6) / darkBoost;
+    }
+
+    _driftInterval() {
+        return map(P.speed, 1, 100, 100, 10);
+    }
+
+    update() {
+        const fc = frameCount;
+
+        // Stepped Z advance — snap to next layer
+        if (fc - this.lastStepFrame >= this._stepInterval()) {
+            this.layer++;
+            this.stepsDone++;
+            this.lastStepFrame = fc;
+        }
+
+        // Cardinal drift — random chance per tick to jump 1 grid cell
+        const driftProb = map(P.drift, 0, 100, 0, 0.4);
+        if (fc - this.lastDriftFrame >= this._driftInterval()) {
+            if (random() < driftProb) {
+                const mag = floor(map(P.spread, 1, 100, 1, 5));
+                const dir = floor(random(4));
+                if      (dir === 0) this.driftGX += mag;
+                else if (dir === 1) this.driftGX -= mag;
+                else if (dir === 2) this.driftGY += mag;
+                else                this.driftGY -= mag;
+            }
+            this.lastDriftFrame = fc;
+        }
+    }
+
+    isDead() {
+        return this.layer >= NUM_LAYERS;
+    }
+
+    draw() {
+        if (this.isDead()) return;
+        const li  = constrain(this.layer, 0, NUM_LAYERS - 1);
+        const z   = LAYER_Z[li];
+        const wx  = this.wx + this.driftGX * this.gridCW;
+        const wy  = this.wy + this.driftGY * this.gridCH;
+        const { sx, sy, scale } = projectParticle(wx, wy, z);
+
+        if (sx < -120 || sx > width+120 || sy < -120 || sy > height+120) return;
+
+        // Font size snapped to multiples of 4 — reinforces discrete layer feel
+        const rawSize     = this.baseFontSize * scale * 2.2;
+        const snappedSize = max(4, round(rawSize / 4) * 4);
+        if (snappedSize < 3) return;
+
+        // Fade: brief fade-in on spawn, fade-out as it reaches nearest layer
+        const travelRatio = this.stepsDone / max(1, this.stepsToLive);
+        const fadeIn  = constrain(map(this.stepsDone, 0, 1, 0, 1), 0, 1);
+        const fadeOut = constrain(map(travelRatio, 0.7, 1.0, 1, 0), 0, 1);
+        const alpha   = fadeIn * fadeOut;
+        if (alpha < 0.01) return;
+
+        const [r, g, b] = particleColor(this.luma);
+
+        // Optional glow halo around particle
+        if (P.glow > 10) {
+            const gAmt = map(P.glow, 10, 100, 3, 18) * scale;
+            fill(r, g, b, alpha * 30);
+            noStroke();
+            textSize(snappedSize + gAmt * 2);
+            textAlign(CENTER, CENTER);
+            text(this.glyph, sx, sy);
+        }
+
+        fill(r, g, b, alpha * 255);
+        noStroke();
+        textSize(snappedSize);
+        textAlign(CENTER, CENTER);
+        text(this.glyph, sx, sy);
+    }
+}
+
+// ─── p5 core ──────────────────────────────────────────────────────────────────
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+    textFont('monospace');
+    background(0);
+    setupUIListeners();
+    updateButtonStates();
+}
+
+function draw() {
+    const trailAlpha = map(P.trail, 0, 80, 255, 8);
+    fill(0, trailAlpha);
+    noStroke();
+    rect(0, 0, width, height);
+
+    if (videoLoaded && videoEl && videoEl.width > 0) {
+        sampleFrame();
+    }
+
+    // Particles
+    const maxCount = map(P.maxp, 10, 100, 200, 6000);
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].isDead()) particles.splice(i, 1);
+    }
+    if (particles.length > maxCount) particles.splice(0, particles.length - maxCount);
+}
+
+// ─── Scanlines ────────────────────────────────────────────────────────────────
+function drawScanlines() {
+    const slAlpha = map(P.scanlines, 0, 100, 0, 120);
+    if (slAlpha < 2) return;
+    stroke(0, slAlpha);
+    strokeWeight(1);
+    for (let y = 0; y < height; y += 2) line(0, y, width, y);
+    noStroke();
+}
+
+// ─── Sample + emit ────────────────────────────────────────────────────────────
+function sampleFrame() {
+    const now        = millis();
+    const interval   = map(P.rate, 1, 100, 200, 8);
+    const shouldEmit = (now - lastEmitTime >= interval);
+
+    videoEl.loadPixels();
+    if (!videoEl.pixels || videoEl.pixels.length === 0) return;
+
+    const vw = videoEl.width, vh = videoEl.height;
+    const vr = vw / vh;
+    let dispW, dispH;
+    if ((width / height) > vr) { dispH = height; dispW = dispH * vr; }
+    else                        { dispW = width;  dispH = dispW / vr; }
+    const dispX = (width  - dispW) / 2;
+    const dispY = (height - dispH) / 2;
+
+    const gridPx     = P.grid;
+    const lumaThresh = map(P.luma, 0, 100, 0, 1);
+    const maxCount   = map(P.maxp, 10, 100, 200, 6000);
+    const cellsX     = max(1, floor(vw / gridPx));
+    const cellsY     = max(1, floor(vh / gridPx));
+    const worldCW    = dispW / cellsX;  // screen-space cell width (pre-distortion)
+    const worldCH    = dispH / cellsY;
+
+    // Rebuild cell array — world positions (pre-projection)
+    mosaicCells = new Array(cellsX * cellsY).fill(null);
+
+    for (let gy = 0; gy < cellsY; gy++) {
+        for (let gx = 0; gx < cellsX; gx++) {
+            const px   = floor(gx * gridPx + gridPx * 0.5);
+            const py   = floor(gy * gridPx + gridPx * 0.5);
+            if (px >= vw || py >= vh) continue;
+            const idx  = (px + py * vw) * 4;
+            const r    = videoEl.pixels[idx];
+            const g    = videoEl.pixels[idx + 1];
+            const b    = videoEl.pixels[idx + 2];
+            const luma = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+            // World position = screen pos before any distortion
+            const wx   = dispX + (gx + 0.5) * worldCW;
+            const wy   = dispY + (gy + 0.5) * worldCH;
+            const colKey = paletteKey3(luma, gx, gy);
+            mosaicCells[gy * cellsX + gx] = { wx, wy, colKey, luma, r, g, b };
+
+            // ── Emission: inverted — dark pixels emit more ──────────────────
+            // emitProb peaks at 1 when luma=0 and drops to ~0 at full luma
+            if (shouldEmit && particles.length < maxCount) {
+                const darkness    = 1 - luma;                  // 0 (bright) → 1 (dark)
+                const threshFade  = constrain(map(luma, lumaThresh, lumaThresh + 0.15, 1, 0), 0, 1);
+                const emitProb    = darkness * darkness * threshFade * 0.12;
+                if (random() < emitProb) {
+                    const p = new ASCIIParticle(wx, wy, luma, [r,g,b], 0, worldCW, worldCH);
+                    particles.push(p);
+                }
+            }
+        }
+    }
+
+    // Draw mosaic (projected + optical warp) then glow then scanlines
+    const mAlpha = map(P.mosaic, 0, 100, 0, 255);
+    buildAndDrawMosaic(mosaicCells, cellsX, cellsY, worldCW, worldCH, mAlpha);
+    drawGlow(mosaicCells, cellsX, cellsY, worldCW, worldCH);
+    drawScanlines();
+
+    if (shouldEmit) lastEmitTime = now;
+}
+
+function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+
+// ─── Video / webcam ───────────────────────────────────────────────────────────
+function toggleWebcam() { usingWebcam ? stopWebcam() : startWebcam(); }
+
+function startWebcam() {
+    if (videoEl) {
+        if (videoEl.elt?.srcObject) videoEl.elt.srcObject.getTracks().forEach(t => t.stop());
+        videoEl.remove(); videoEl = null;
+    }
+    usingWebcam = true; videoLoaded = false;
+    document.getElementById('webcam-btn').classList.add('active');
+    document.getElementById('flip-btn').classList.add('visible');
+    document.getElementById('file-name').innerText = 'webcam active';
+    document.getElementById('cam-sub-text').innerText = 'active';
+    videoEl = createCapture({ video: { facingMode } }, () => {
+        videoEl.hide(); videoLoaded = true; videoPlaying = true;
+        document.getElementById('btn-play').innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    });
+}
+
+function stopWebcam() {
+    if (videoEl) {
+        if (videoEl.elt?.srcObject) videoEl.elt.srcObject.getTracks().forEach(t => t.stop());
+        videoEl.remove(); videoEl = null;
+    }
+    usingWebcam = false; facingMode = 'user'; videoLoaded = false; videoPlaying = false;
+    document.getElementById('webcam-btn').classList.remove('active');
+    document.getElementById('flip-btn').classList.remove('visible');
+    document.getElementById('file-name').innerText = 'mp4 or mov';
+    document.getElementById('cam-sub-text').innerText = 'webcam or mobile';
+    document.getElementById('btn-play').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+}
+
+function flipCamera() {
+    if (!usingWebcam) return;
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    startWebcam();
+}
+
+function togglePlay() {
+    if (!videoEl || !videoLoaded) return;
+    videoPlaying = !videoPlaying;
+    if (videoPlaying) {
+        videoEl.loop();
+        document.getElementById('btn-play').innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    } else {
+        videoEl.pause();
+        document.getElementById('btn-play').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    }
+}
+
+function restartVideo() {
+    if (videoEl) { videoEl.time(0); if (!videoPlaying) togglePlay(); }
+    particles = [];
+}
+
+function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (usingWebcam) stopWebcam();
+    if (videoEl) { videoEl.stop(); videoEl.remove(); videoEl = null; }
+    particles = [];
+    document.getElementById('file-name').innerText = file.name;
+    const url = URL.createObjectURL(file);
+    videoEl = createVideo(url, () => {
+        videoEl.volume(0); videoEl.loop(); videoEl.hide();
+        videoLoaded = true; videoPlaying = true;
+        document.getElementById('btn-play').innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    });
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+function updateButtonStates() {
+    document.querySelectorAll('#glyph-set-buttons .selector-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.value === glyphSetKey));
+    document.querySelectorAll('#palette-buttons .selector-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.value === paletteKey));
+    document.getElementById('custom-glyph-group').style.display =
+        glyphSetKey === 'custom' ? 'flex' : 'none';
+}
+
+function setupSlider(id, paramKey, minV, maxV) {
+    const slider = document.getElementById('slider-' + id);
+    const input  = document.getElementById('val-'    + id);
+    if (!slider || !input) return;
+    slider.addEventListener('input', e => {
+        P[paramKey] = parseFloat(e.target.value);
+        input.value = P[paramKey];
+    });
+    input.addEventListener('change', e => {
+        let v = parseFloat(e.target.value);
+        if (isNaN(v)) v = P[paramKey];
+        v = Math.min(maxV, Math.max(minV, v));
+        P[paramKey] = v; slider.value = v; e.target.value = v; e.target.blur();
+    });
+    input.addEventListener('keydown', e => e.stopPropagation());
+}
+
+function setupUIListeners() {
+    setupSlider('mosaic',    'mosaic',    0,    100);
+    setupSlider('glow',      'glow',      0,    100);
+    setupSlider('dither',    'dither',    0,    100);
+    setupSlider('scanlines', 'scanlines', 0,    100);
+    setupSlider('grid',      'grid',      4,    60 );
+    setupSlider('rate',      'rate',      1,    100);
+    setupSlider('luma',      'luma',      0,    100);
+    setupSlider('speed',     'speed',     1,    100);
+    setupSlider('spread',    'spread',    1,    100);
+    setupSlider('drift',     'drift',     0,    100);
+    setupSlider('life',      'life',      10,   100);
+    setupSlider('bright',    'bright',    10,   100);
+    setupSlider('trail',     'trail',     0,    80 );
+    setupSlider('maxp',      'maxp',      10,   100);
+    setupSlider('camdist',   'camdist',   0,    100);
+    setupSlider('fov',       'fov',       15,   140);
+    setupSlider('optcomp',   'optcomp',   -100, 100);
+
+    document.querySelectorAll('#glyph-set-buttons .selector-btn').forEach(btn =>
+        btn.addEventListener('click', e => {
+            glyphSetKey = e.target.dataset.value; particles = []; updateButtonStates();
+        }));
+    document.querySelectorAll('#palette-buttons .selector-btn').forEach(btn =>
+        btn.addEventListener('click', e => {
+            paletteKey = e.target.dataset.value; updateButtonStates();
+        }));
+    document.getElementById('custom-glyphs').addEventListener('input', e => {
+        customGlyphs = [...new Set([...e.target.value].filter(c => c.trim()))];
+        particles = [];
+    });
+    document.getElementById('custom-glyphs').addEventListener('keydown', e => e.stopPropagation());
+    document.getElementById('videoUpload').addEventListener('change', handleFile, false);
+    document.getElementById('webcam-btn').addEventListener('click', toggleWebcam);
+    document.getElementById('flip-btn').addEventListener('click', flipCamera);
+    document.getElementById('btn-play').addEventListener('click', togglePlay);
+    document.getElementById('btn-restart').addEventListener('click', restartVideo);
+    document.getElementById('toggle-btn').addEventListener('click', () => {
+        document.getElementById('ui-controls').classList.toggle('collapsed');
+        document.getElementById('toggle-btn').classList.toggle('rotated');
+    });
+}
+</script>
+</body>
+</html>
