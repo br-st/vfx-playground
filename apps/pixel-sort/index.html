@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PIXEL SORT // BR_ST</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+:root {
+  --bg:#080B14;--surf2:#131920;--border:#1E2A38;
+  --cyan:#00F5FF;--violet:#8B5CF6;--gold:#FFD700;--coral:#FF6B6B;
+  --text:#E8EDF5;--dim:#6B7A8D;
+  --sans:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:var(--sans);-webkit-tap-highlight-color:transparent;touch-action:none;}
+#c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block;background:#000;}
+
+/* ── Landing ─────────────────────────────────────── */
+#landing{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{background:rgba(8,11,20,.92);border:1px solid var(--border);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-radius:24px;padding:32px 24px;text-align:center;width:100%;max-width:380px;position:relative;}
+.card::before{content:'';position:absolute;inset:-1px;border-radius:25px;
+  background:linear-gradient(135deg,#00F5FF1A,transparent 50%,#8B5CF61A);z-index:-1;pointer-events:none;}
+.badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:16px;}
+.headline{font-size:clamp(28px,8vw,42px);font-weight:700;line-height:1.1;margin-bottom:8px;
+  background:linear-gradient(135deg,var(--text) 40%,var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sub{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:24px;}
+.upload-zone{border:1px dashed rgba(0,245,255,.25);background:rgba(0,245,255,.04);
+  border-radius:16px;padding:26px 20px;text-align:center;cursor:pointer;
+  transition:all .2s;margin-bottom:10px;user-select:none;}
+.upload-zone:hover,.upload-zone:active{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.4);}
+.uz-icon{font-size:28px;margin-bottom:10px;color:var(--cyan);opacity:.7;letter-spacing:-2px;}
+.uz-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.uz-hint{font-size:12px;color:var(--dim);}
+.src-reveal{display:flex;gap:8px;overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .3s ease,opacity .3s ease,margin .3s ease;margin-bottom:0;}
+.src-reveal.open{max-height:80px;opacity:1;margin-bottom:16px;}
+.src-btn{flex:1;padding:14px 8px;border-radius:12px;border:1px solid var(--border);
+  background:var(--surf2);color:var(--dim);font-family:var(--sans);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .15s;}
+.src-btn:hover,.src-btn:active{background:rgba(0,245,255,.08);border-color:rgba(0,245,255,.3);color:var(--cyan);}
+.credit{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.7;letter-spacing:.02em;}
+.credit a{color:var(--text);font-weight:600;text-decoration:none;border-bottom:1px solid var(--border);}
+
+/* ── Top bar ─────────────────────────────────────── */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:15;padding:14px 14px 10px;display:none;
+  align-items:center;justify-content:space-between;}
+.chip{display:flex;align-items:center;gap:8px;background:rgba(13,17,23,.88);border:1px solid var(--border);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:10px;padding:8px 12px;
+  font-family:var(--mono);font-size:11px;color:var(--dim);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex-shrink:0;transition:background .3s;}
+.dot.on{background:var(--cyan);box-shadow:0 0 6px var(--cyan);}
+.top-acts{display:flex;gap:8px;}
+.tbtn{background:rgba(13,17,20,.88);border:1px solid var(--border);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-radius:10px;padding:8px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;
+  transition:all .18s;white-space:nowrap;cursor:pointer;font-family:var(--sans);}
+.tbtn-dim{color:var(--dim);}
+.tbtn-cyan{color:var(--cyan);border-color:rgba(0,245,255,.25);}
+.tbtn-violet{color:var(--violet);border-color:rgba(139,92,246,.3);font-size:16px;padding:7px 12px;}
+.tbtn-dim:active{background:rgba(255,255,255,.06);}
+.tbtn-cyan:active{background:rgba(0,245,255,.12);}
+.tbtn-violet:active{background:rgba(139,92,246,.15);}
+
+/* ── Bottom sheet ────────────────────────────────── */
+#sheet{position:fixed;bottom:0;left:0;right:0;z-index:15;display:none;flex-direction:column;
+  transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);
+  padding-bottom:var(--safe-b);}
+#sheet.open{transform:translateY(0);}
+.drag-row{display:flex;align-items:center;justify-content:center;
+  padding:10px 0 4px;cursor:pointer;touch-action:pan-y;}
+.drag-pill{width:36px;height:4px;background:var(--border);border-radius:2px;}
+#tabbar{display:flex;background:rgba(8,11,20,.97);border-top:1px solid var(--border);padding:0 4px;}
+.tab{flex:1;padding:10px 2px;background:none;border:none;border-top:2px solid transparent;
+  font-size:9px;font-weight:500;color:var(--dim);text-align:center;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;transition:color .15s,border-top-color .15s;
+  cursor:pointer;font-family:var(--sans);}
+.tab.active{color:var(--text);border-top-color:var(--cyan);}
+#panel{background:rgba(8,11,20,.98);border-top:1px solid var(--border);overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;max-height:52vh;
+  padding:18px 16px 20px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── Controls ────────────────────────────────────── */
+.sec{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.15em;
+  text-transform:uppercase;margin-bottom:12px;margin-top:4px;}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.lbl{font-family:var(--mono);font-size:11px;color:var(--dim);width:92px;flex-shrink:0;}
+.val{font-family:var(--mono);font-size:11px;color:var(--cyan);width:46px;
+  text-align:right;flex-shrink:0;}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;
+  background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:50%;background:var(--cyan);box-shadow:0 0 8px rgba(0,245,255,.4);}
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.toggle-lbl{font-size:13px;font-weight:600;color:var(--text);}
+.track{width:44px;height:26px;border-radius:13px;background:var(--border);
+  position:relative;cursor:pointer;flex-shrink:0;transition:background .2s,border .2s;}
+.track.on{background:rgba(0,245,255,.3);border:1px solid rgba(0,245,255,.4);}
+.thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:var(--dim);transition:transform .2s,background .2s;}
+.track.on .thumb{transform:translateX(18px);background:var(--cyan);}
+
+/* ── Input tab ───────────────────────────────────── */
+.src-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.ibtn{padding:16px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surf2);
+  color:var(--dim);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;text-align:center;}
+.ibtn:hover,.ibtn:active{background:rgba(0,245,255,.08);border-color:rgba(0,245,255,.3);color:var(--cyan);}
+.ibtn.active{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.45);color:var(--cyan);}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- Landing -->
+<div id="landing">
+  <div class="card">
+    <div class="badge">PIXEL SORT // BR_ST</div>
+    <h1 class="headline">Pixel<br>Sort</h1>
+    <p class="sub">Threshold-driven pixel sorting — brightness spans reordered into glitchy displacement.</p>
+    <div class="upload-zone" id="upload-zone">
+      <div class="uz-icon">▒▓█</div>
+      <div class="uz-title">Tap to choose source</div>
+      <div class="uz-hint">camera &middot; photo &middot; video</div>
+    </div>
+    <div class="src-reveal" id="src-reveal">
+      <button class="src-btn" id="btn-cam">Camera</button>
+      <button class="src-btn" id="btn-img">Photo</button>
+      <button class="src-btn" id="btn-vid">Video</button>
+    </div>
+    <div class="credit">
+      Visual experiment by <a href="https://www.instagram.com/br_st.gfx" target="_blank" rel="noopener">BR_ST.GFX</a><br>coded with Claude
+    </div>
+  </div>
+</div>
+<input type="file" id="fi-img" accept="image/*" style="display:none">
+<input type="file" id="fi-vid" accept="video/*" style="display:none">
+
+<!-- Top bar -->
+<div id="topbar">
+  <div class="chip">
+    <div class="dot on" id="src-dot"></div>
+    <span id="src-lbl">CAM</span>
+  </div>
+  <div class="top-acts">
+    <button class="tbtn tbtn-dim" id="flip-btn" style="display:none">&#x21C4;</button>
+    <button class="tbtn tbtn-violet" id="dl-btn">&#x2913;</button>
+    <button class="tbtn tbtn-dim" id="ctrl-btn">CONTROLS</button>
+    <button class="tbtn tbtn-cyan" id="back-btn">&#8635; New</button>
+  </div>
+</div>
+
+<!-- Bottom sheet -->
+<div id="sheet">
+  <div class="drag-row" id="drag-handle"><div class="drag-pill"></div></div>
+  <div id="tabbar">
+    <button class="tab active" data-tab="sort">Sort</button>
+    <button class="tab" data-tab="inp">Input</button>
+  </div>
+  <div id="panel">
+
+    <!-- Sort tab -->
+    <div class="page active" id="pg-sort">
+      <div class="sec">Threshold</div>
+      <div class="row">
+        <span class="lbl">Lower</span>
+        <input type="range" id="sl-lo" min="0" max="255" value="50" step="1">
+        <span class="val" id="vl-lo">50</span>
+      </div>
+      <div class="row">
+        <span class="lbl">Upper</span>
+        <input type="range" id="sl-hi" min="0" max="255" value="200" step="1">
+        <span class="val" id="vl-hi">200</span>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Sort Outside Range</span>
+        <div class="track" id="outside-track"><div class="thumb"></div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="sec">Direction</div>
+      <div class="row">
+        <span class="lbl">Angle</span>
+        <input type="range" id="sl-ang" min="0" max="360" value="0" step="1">
+        <span class="val" id="vl-ang">0°</span>
+      </div>
+      <div class="row">
+        <span class="lbl">Offset</span>
+        <input type="range" id="sl-off" min="0" max="100" value="0" step="1">
+        <span class="val" id="vl-off">0</span>
+      </div>
+    </div>
+
+    <!-- Input tab -->
+    <div class="page" id="pg-inp">
+      <div class="sec">Source</div>
+      <div class="src-grid">
+        <button class="ibtn" id="inp-front">Front Camera</button>
+        <button class="ibtn" id="inp-rear">Rear Camera</button>
+        <button class="ibtn" id="inp-photo">Upload Photo</button>
+        <button class="ibtn" id="inp-video">Upload Video</button>
+      </div>
+    </div>
+
+  </div><!-- /panel -->
+</div><!-- /sheet -->
+
+<script>
+(function () {
+'use strict';
+
+/* ── State ───────────────────────────────────────── */
+var videoEl   = null;
+var imgEl     = null;
+var srcType   = null; // 'cam' | 'img' | 'vid'
+var facingMode = 'environment';
+var sheetOpen  = false;
+var animId     = null;
+
+/* ── Params ──────────────────────────────────────── */
+var loThresh   = 50;
+var hiThresh   = 200;
+var sortOut    = false; // sort outside range
+var angleDeg   = 0;
+var offsetPct  = 0;
+
+/* ── Canvas ──────────────────────────────────────── */
+var canvas  = document.getElementById('c');
+var ctx     = canvas.getContext('2d');
+// Offscreen canvas for rotation
+var offA    = document.createElement('canvas');
+var offCtxA = offA.getContext('2d', { willReadFrequently: true });
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+/* ── Scratch buffers (avoid GC per frame) ────────── */
+var MAX_LEN   = 8192;
+var pixBuf    = new Uint8Array(MAX_LEN * 4);  // temp pixel rgba store
+var sortKeys  = new Float64Array(MAX_LEN);    // brightness key per pixel in span
+var sortIdx   = new Uint16Array(MAX_LEN);     // original indices
+
+/* ── Pixel sort algorithm ────────────────────────── */
+function luma(r, g, b) {
+  return (r * 77 + g * 150 + b * 29) >> 8; // fast integer 0.299r+0.587g+0.114b
+}
+
+function sortSpan(data, base, len) {
+  // Ensure buffers are large enough
+  if (len > MAX_LEN) len = MAX_LEN;
+
+  // Copy pixels into pixBuf, record keys
+  for (var j = 0; j < len; j++) {
+    var src = base + j * 4;
+    pixBuf[j*4]   = data[src];
+    pixBuf[j*4+1] = data[src+1];
+    pixBuf[j*4+2] = data[src+2];
+    pixBuf[j*4+3] = data[src+3];
+    sortKeys[j]   = luma(data[src], data[src+1], data[src+2]);
+    sortIdx[j]    = j;
+  }
+
+  // Sort indices by brightness (insertion sort — fast for near-sorted small spans)
+  // Switch to native sort for larger spans
+  if (len <= 32) {
+    for (var i = 1; i < len; i++) {
+      var keyI = sortKeys[i], idxI = sortIdx[i], k = i - 1;
+      while (k >= 0 && sortKeys[k] > keyI) {
+        sortKeys[k+1] = sortKeys[k];
+        sortIdx[k+1]  = sortIdx[k];
+        k--;
+      }
+      sortKeys[k+1] = keyI;
+      sortIdx[k+1]  = idxI;
+    }
+  } else {
+    // Build a sortable array of [key, origIdx] pairs using a plain array
+    var pairs = new Array(len);
+    for (var j = 0; j < len; j++) pairs[j] = [sortKeys[j], j];
+    pairs.sort(function(a, b) { return a[0] - b[0]; });
+    for (var j = 0; j < len; j++) sortIdx[j] = pairs[j][1];
+  }
+
+  // Write sorted pixels back
+  for (var j = 0; j < len; j++) {
+    var dst = base + j * 4;
+    var si  = sortIdx[j] * 4;
+    data[dst]   = pixBuf[si];
+    data[dst+1] = pixBuf[si+1];
+    data[dst+2] = pixBuf[si+2];
+    data[dst+3] = pixBuf[si+3];
+  }
+}
+
+function sortRow(data, rowStart, rowLen) {
+  var lo      = loThresh;
+  var hi      = hiThresh;
+  var outside = sortOut;
+  var offPx   = Math.floor(offsetPct * rowLen * 0.01);
+  var i       = offPx;
+
+  while (i < rowLen) {
+    var p      = rowStart + i * 4;
+    var br     = luma(data[p], data[p+1], data[p+2]);
+    var inRng  = (br >= lo && br <= hi);
+    var target = outside ? !inRng : inRng;
+
+    if (!target) { i++; continue; }
+
+    // Span start — walk to find end
+    var spanStart = i;
+    i++;
+    while (i < rowLen) {
+      p     = rowStart + i * 4;
+      br    = luma(data[p], data[p+1], data[p+2]);
+      inRng = (br >= lo && br <= hi);
+      if ((outside ? !inRng : inRng) === false) break;
+      i++;
+    }
+
+    var spanLen = i - spanStart;
+    if (spanLen < 2) continue;
+
+    sortSpan(data, rowStart + spanStart * 4, spanLen);
+  }
+}
+
+/* ── Process frame ───────────────────────────────── */
+function processFrame(source) {
+  var W   = canvas.width;
+  var H   = canvas.height;
+  var rad = angleDeg * Math.PI / 180;
+
+  // Scale for performance (half resolution on axis-aligned, full on diagonal angles)
+  var diagScale = Math.abs(Math.sin(rad * 2)); // 0 at 0/90, 1 at 45
+  var scale = 0.5 - diagScale * 0.15; // 0.35–0.5
+
+  var sw = Math.round(W * scale);
+  var sh = Math.round(H * scale);
+
+  // Rotated bounding box
+  var cosA = Math.abs(Math.cos(rad));
+  var sinA = Math.abs(Math.sin(rad));
+  var rw   = Math.ceil(sw * cosA + sh * sinA);
+  var rh   = Math.ceil(sw * sinA + sh * cosA);
+
+  if (offA.width !== rw || offA.height !== rh) {
+    offA.width  = rw;
+    offA.height = rh;
+  }
+
+  // Draw source rotated by -angle into offscreen canvas
+  offCtxA.clearRect(0, 0, rw, rh);
+  offCtxA.save();
+  offCtxA.translate(rw / 2, rh / 2);
+  offCtxA.rotate(-rad);
+  offCtxA.drawImage(source, -sw / 2, -sh / 2, sw, sh);
+  offCtxA.restore();
+
+  // Sort rows on the rotated pixel data
+  var imgData = offCtxA.getImageData(0, 0, rw, rh);
+  var data    = imgData.data;
+  for (var row = 0; row < rh; row++) {
+    sortRow(data, row * rw * 4, rw);
+  }
+  offCtxA.putImageData(imgData, 0, 0);
+
+  // Rotate the sorted result back to display canvas
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(rad);
+  // Scale back up to fill display
+  var drawW = rw / scale;
+  var drawH = rh / scale;
+  ctx.drawImage(offA, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.restore();
+}
+
+/* ── Render loop ─────────────────────────────────── */
+function tick() {
+  if ((srcType === 'cam' || srcType === 'vid') && videoEl && videoEl.readyState >= 2) {
+    processFrame(videoEl);
+  } else if (srcType === 'img' && imgEl && imgEl.complete) {
+    processFrame(imgEl);
+  }
+  animId = requestAnimationFrame(tick);
+}
+
+function startLoop() {
+  if (animId) cancelAnimationFrame(animId);
+  animId = requestAnimationFrame(tick);
+}
+
+/* ── Camera ──────────────────────────────────────── */
+function stopCurrentSource() {
+  if (videoEl) {
+    if (videoEl.srcObject) videoEl.srcObject.getTracks().forEach(function (t) { t.stop(); });
+    videoEl.pause();
+    videoEl = null;
+  }
+  imgEl = null;
+}
+
+function startCamera(facing) {
+  facingMode = facing || 'environment';
+  stopCurrentSource();
+  if (!navigator.mediaDevices) { alert('Camera not available'); return; }
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false
+  }).then(function (stream) {
+    videoEl = document.createElement('video');
+    videoEl.srcObject  = stream;
+    videoEl.autoplay   = true;
+    videoEl.playsInline = true;
+    videoEl.muted      = true;
+    videoEl.onloadedmetadata = function () {
+      videoEl.play();
+      srcType = 'cam';
+      showUI('CAM', true, facing === 'user');
+      startLoop();
+    };
+  }).catch(function (e) { alert('Camera error: ' + e.message); });
+}
+
+/* ── Photo / video loaders ───────────────────────── */
+function loadPhoto(file) {
+  stopCurrentSource();
+  var url = URL.createObjectURL(file);
+  imgEl = new Image();
+  imgEl.onload = function () {
+    srcType = 'img';
+    showUI('IMG', false, false);
+    startLoop();
+  };
+  imgEl.src = url;
+}
+
+function loadVideo(file) {
+  stopCurrentSource();
+  videoEl = document.createElement('video');
+  videoEl.src        = URL.createObjectURL(file);
+  videoEl.autoplay   = true;
+  videoEl.loop       = true;
+  videoEl.playsInline = true;
+  videoEl.muted      = true;
+  videoEl.onloadedmetadata = function () {
+    videoEl.play();
+    srcType = 'vid';
+    showUI('VID', false, false);
+    startLoop();
+  };
+}
+
+/* ── UI state ────────────────────────────────────── */
+function showUI(lbl, live, isFront) {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('topbar').style.display  = 'flex';
+  document.getElementById('sheet').style.display   = 'flex';
+  document.getElementById('src-lbl').textContent   = lbl;
+  document.getElementById('src-dot').className     = 'dot' + (live ? ' on' : '');
+  document.getElementById('flip-btn').style.display = (lbl === 'CAM') ? '' : 'none';
+
+  // Highlight active input button
+  document.querySelectorAll('.ibtn').forEach(function (b) { b.classList.remove('active'); });
+  if (lbl === 'CAM') {
+    document.getElementById(isFront ? 'inp-front' : 'inp-rear').classList.add('active');
+  } else if (lbl === 'IMG') {
+    document.getElementById('inp-photo').classList.add('active');
+  } else if (lbl === 'VID') {
+    document.getElementById('inp-video').classList.add('active');
+  }
+}
+
+function reset() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  stopCurrentSource();
+  srcType = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('landing').style.display = 'flex';
+  document.getElementById('topbar').style.display  = 'none';
+  document.getElementById('sheet').style.display   = 'none';
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('src-reveal').classList.remove('open');
+  sheetOpen = false;
+}
+
+/* ── Download ────────────────────────────────────── */
+function downloadFrame() {
+  canvas.toBlob(function (blob) {
+    var url = URL.createObjectURL(blob);
+    var a   = document.createElement('a');
+    a.href     = url;
+    a.download = 'pixelsort_' + Date.now() + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }, 'image/png');
+}
+
+/* ── Bind controls ───────────────────────────────── */
+function bindSlider(id, valId, onInput) {
+  var el = document.getElementById(id);
+  var vl = document.getElementById(valId);
+  el.addEventListener('input', function () { onInput(parseFloat(el.value), vl); });
+}
+
+bindSlider('sl-lo',  'vl-lo',  function (v, vl) { loThresh  = v; vl.textContent = Math.round(v); });
+bindSlider('sl-hi',  'vl-hi',  function (v, vl) { hiThresh  = v; vl.textContent = Math.round(v); });
+bindSlider('sl-ang', 'vl-ang', function (v, vl) { angleDeg  = v; vl.textContent = Math.round(v) + '°'; });
+bindSlider('sl-off', 'vl-off', function (v, vl) { offsetPct = v; vl.textContent = Math.round(v); });
+
+document.getElementById('outside-track').addEventListener('click', function () {
+  this.classList.toggle('on');
+  sortOut = this.classList.contains('on');
+});
+
+/* Landing buttons */
+document.getElementById('upload-zone').addEventListener('click', function (e) {
+  e.stopPropagation();
+  document.getElementById('src-reveal').classList.toggle('open');
+});
+document.getElementById('btn-cam').addEventListener('click', function () { startCamera('environment'); });
+document.getElementById('btn-img').addEventListener('click', function () { document.getElementById('fi-img').click(); });
+document.getElementById('btn-vid').addEventListener('click', function () { document.getElementById('fi-vid').click(); });
+
+document.getElementById('fi-img').addEventListener('change', function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  loadPhoto(f); e.target.value = '';
+});
+document.getElementById('fi-vid').addEventListener('change', function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  loadVideo(f); e.target.value = '';
+});
+
+/* Top bar */
+document.getElementById('back-btn').addEventListener('click', reset);
+document.getElementById('flip-btn').addEventListener('click', function () {
+  facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+  startCamera(facingMode);
+});
+document.getElementById('dl-btn').addEventListener('click', downloadFrame);
+document.getElementById('ctrl-btn').addEventListener('click', function () {
+  sheetOpen = !sheetOpen;
+  document.getElementById('sheet').classList.toggle('open', sheetOpen);
+});
+
+/* Input tab */
+document.getElementById('inp-front').addEventListener('click', function () { startCamera('user'); });
+document.getElementById('inp-rear').addEventListener('click',  function () { startCamera('environment'); });
+document.getElementById('inp-photo').addEventListener('click', function () { document.getElementById('fi-img').click(); });
+document.getElementById('inp-video').addEventListener('click', function () { document.getElementById('fi-vid').click(); });
+
+/* Tabs */
+document.querySelectorAll('.tab').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var tab = this.dataset.tab;
+    document.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+    this.classList.add('active');
+    document.getElementById('pg-' + tab).classList.add('active');
+  });
+});
+
+/* Drag handle + swipe */
+document.getElementById('drag-handle').addEventListener('click', function () {
+  sheetOpen = !sheetOpen;
+  document.getElementById('sheet').classList.toggle('open', sheetOpen);
+});
+var sheet = document.getElementById('sheet'), ty0 = 0;
+sheet.addEventListener('touchstart', function (e) { ty0 = e.touches[0].clientY; }, { passive: true });
+sheet.addEventListener('touchend', function (e) {
+  var dy = e.changedTouches[0].clientY - ty0;
+  if (Math.abs(dy) > 40) { sheetOpen = dy < 0; sheet.classList.toggle('open', sheetOpen); }
+}, { passive: true });
+
+})();
+</script>
+</body>
+</html>
