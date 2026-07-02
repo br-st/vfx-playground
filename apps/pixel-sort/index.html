@@ -126,12 +126,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .gbtn:hover,.gbtn:active{background:rgba(0,245,255,.08);border-color:rgba(0,245,255,.3);color:var(--cyan);}
 .gbtn.active{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.45);color:var(--cyan);}
 
-/* Look buttons get accent colors per preset */
-.lbtn-heat.active{background:rgba(255,80,0,.12);border-color:rgba(255,80,0,.45);color:#FF5000;}
-.lbtn-mono.active{background:rgba(232,237,245,.08);border-color:rgba(232,237,245,.35);color:var(--text);}
-.lbtn-pop.active{background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.45);color:var(--gold);}
-.lbtn-warm.active{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.45);color:var(--coral);}
+/* Look buttons — accent colors per preset */
+.lbtn-heat.active  {background:rgba(255,80,0,.12);border-color:rgba(255,80,0,.45);color:#FF5000;}
+.lbtn-mono.active  {background:rgba(232,237,245,.08);border-color:rgba(232,237,245,.35);color:var(--text);}
+.lbtn-pop.active   {background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.45);color:var(--gold);}
+.lbtn-warm.active  {background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.45);color:var(--coral);}
 .lbtn-glitch.active{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.45);color:var(--violet);}
+.lbtn-infra.active {background:rgba(0,220,80,.12);border-color:rgba(0,220,80,.45);color:#00DC50;}
+.lbtn-neon.active  {background:rgba(255,0,200,.12);border-color:rgba(255,0,200,.45);color:#FF00C8;}
+.lbtn-duo.active   {background:rgba(100,0,255,.12);border-color:rgba(100,0,255,.45);color:#8844FF;}
+.lbtn-acid.active  {background:rgba(200,255,0,.12);border-color:rgba(200,255,0,.45);color:#C8FF00;}
+.lbtn-ice.active   {background:rgba(100,200,255,.12);border-color:rgba(100,200,255,.45);color:#64C8FF;}
+.lbtn-sunset.active{background:rgba(255,140,60,.12);border-color:rgba(255,140,60,.45);color:#FF8C3C;}
+.lbtn-matrix.active{background:rgba(0,200,0,.12);border-color:rgba(0,200,0,.45);color:#00C800;}
+.lbtn-invert.active{background:rgba(232,237,245,.06);border-color:rgba(232,237,245,.28);color:var(--dim);}
+
+/* 3-column grid for Look tab */
+.look-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;}
+.look-grid .gbtn{padding:12px 4px;font-size:11px;}
 
 /* Violet accent for anim tab */
 #pg-anim input[type=range]::-webkit-slider-thumb{background:var(--violet);box-shadow:0 0 8px rgba(139,92,246,.4);}
@@ -271,6 +283,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
         <span class="toggle-lbl">Animate Offset</span>
         <div class="track" id="anim-off-track"><div class="thumb"></div></div>
       </div>
+      <div class="seg" id="seg-offdir" style="margin-bottom:14px;">
+        <button class="seg-btn active" data-offdir="fwd">Forward</button>
+        <button class="seg-btn" data-offdir="rev">Reverse</button>
+        <button class="seg-btn" data-offdir="bounce">Bounce</button>
+        <button class="seg-btn" data-offdir="rand">Random</button>
+      </div>
       <div class="row">
         <span class="lbl">Speed</span>
         <input type="range" id="sl-offspd" min="1" max="100" value="30" step="1">
@@ -297,13 +315,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
     <!-- ── Look tab ──────────────────────────────── -->
     <div class="page" id="pg-look">
       <div class="sec">Color Preset</div>
-      <div class="btn-grid">
-        <button class="gbtn active" data-look="0">None</button>
-        <button class="gbtn lbtn-heat" data-look="1">Heat Map</button>
-        <button class="gbtn lbtn-mono" data-look="2">Monochrome</button>
-        <button class="gbtn lbtn-pop" data-look="3">Pop Colors</button>
-        <button class="gbtn lbtn-warm" data-look="4">Saturate</button>
+      <div class="look-grid">
+        <button class="gbtn active"      data-look="0">None</button>
+        <button class="gbtn lbtn-heat"   data-look="1">Heat</button>
+        <button class="gbtn lbtn-mono"   data-look="2">Mono</button>
+        <button class="gbtn lbtn-pop"    data-look="3">Pop</button>
+        <button class="gbtn lbtn-warm"   data-look="4">Saturate</button>
         <button class="gbtn lbtn-glitch" data-look="5">Glitch</button>
+        <button class="gbtn lbtn-infra"  data-look="6">Infrared</button>
+        <button class="gbtn lbtn-neon"   data-look="7">Neon</button>
+        <button class="gbtn lbtn-duo"    data-look="8">Duotone</button>
+        <button class="gbtn lbtn-acid"   data-look="9">Acid</button>
+        <button class="gbtn lbtn-ice"    data-look="10">Ice</button>
+        <button class="gbtn lbtn-sunset" data-look="11">Sunset</button>
+        <button class="gbtn lbtn-matrix" data-look="12">Matrix</button>
+        <button class="gbtn lbtn-invert" data-look="13">Invert</button>
       </div>
     </div>
 
@@ -342,13 +368,16 @@ var offsetPct = 0;
 var resolution = 50;  // 5-100 %
 
 /* ── Animation params ────────────────────────────── */
-var animOffEn  = false;
-var animOffSpd = 30;
-var animThrEn  = false;
-var animThrSpd = 20;
-var animThrAmt = 30;
-var animOffPhase = 0;
-var animThrPhase = 0;
+var animOffEn       = false;
+var animOffSpd      = 30;
+var animOffDir      = 'fwd';   // 'fwd' | 'rev' | 'bounce' | 'rand'
+var animOffPhase    = 0;
+var animOffBounceDir = 1;      // +1 or -1 for bounce
+var animOffRandTimer = 0;
+var animThrEn       = false;
+var animThrSpd      = 20;
+var animThrAmt      = 30;
+var animThrPhase    = 0;
 
 /* ── Look ────────────────────────────────────────── */
 var lookMode = 0;  // 0=none 1=heat 2=mono 3=pop 4=sat 5=glitch
@@ -413,40 +442,66 @@ function rgbToHsl(r, g, b) {
   return [h, s, l];
 }
 
-/* ── Heat colormap ───────────────────────────────── */
-// Pre-bake 256-entry LUT for performance
-var heatLUT = (function () {
-  var lut = new Uint8Array(256 * 3);
-  for (var i = 0; i < 256; i++) {
-    var t = i / 255, r, g, b;
-    if (t < 0.2)       { r = Math.round(t*5*120);         g = 0;                          b = Math.round(t*5*220); }
-    else if (t < 0.4)  { var x=(t-0.2)*5; r=120+Math.round(x*135); g=0;                  b=Math.round((1-x)*220); }
-    else if (t < 0.6)  { var x=(t-0.4)*5; r=255;          g=Math.round(x*140);            b=0; }
-    else if (t < 0.8)  { var x=(t-0.6)*5; r=255;          g=140+Math.round(x*115);        b=0; }
-    else               { var x=(t-0.8)*5; r=255;          g=255;                          b=Math.round(x*255); }
-    lut[i*3]=r; lut[i*3+1]=g; lut[i*3+2]=b;
-  }
+/* ── Color LUTs (pre-baked 256-entry, luma→RGB) ───── */
+function makeLUT(fn) {
+  var lut = new Uint8Array(768);
+  for (var i = 0; i < 256; i++) { var c = fn(i / 255); lut[i*3]=c[0]; lut[i*3+1]=c[1]; lut[i*3+2]=c[2]; }
   return lut;
-})();
+}
+function lerp3(a, b, t) {
+  return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)];
+}
+
+var LUTS = {
+  1: makeLUT(function(t) { // Heat: black→violet→red→orange→white
+    if(t<0.2)     { var x=t/0.2;       return lerp3([0,0,0],[120,0,220],x); }
+    if(t<0.4)     { var x=(t-0.2)/0.2; return lerp3([120,0,220],[255,0,0],x); }
+    if(t<0.65)    { var x=(t-0.4)/0.25;return lerp3([255,0,0],[255,160,0],x); }
+    if(t<0.85)    { var x=(t-0.65)/0.2;return lerp3([255,160,0],[255,255,0],x); }
+                    var x=(t-0.85)/0.15;return lerp3([255,255,0],[255,255,255],x);
+  }),
+  6: makeLUT(function(t) { // Infrared: black→blue→green→yellow→white (FLIR-style)
+    if(t<0.25)    { var x=t/0.25;       return lerp3([0,0,0],[0,60,200],x); }
+    if(t<0.5)     { var x=(t-0.25)/0.25;return lerp3([0,60,200],[0,230,80],x); }
+    if(t<0.75)    { var x=(t-0.5)/0.25; return lerp3([0,230,80],[255,255,0],x); }
+                    var x=(t-0.75)/0.25; return lerp3([255,255,0],[255,255,255],x);
+  }),
+  8: makeLUT(function(t) { // Duotone: deep indigo → bright yellow
+    return lerp3([28,0,90],[255,232,0],t);
+  }),
+  9: makeLUT(function(t) { // Acid: full-hue rotation across luma range
+    var h = (t * 3.5) % 1;
+    var q=0.5, p=0;
+    function hr(u){u=(u%1+1)%1; if(u<1/6)return p+(q-p)*6*u; if(u<1/2)return q; if(u<2/3)return p+(q-p)*(2/3-u)*6; return p;}
+    return [Math.round(hr(h+1/3)*255), Math.round(hr(h)*255), Math.round(hr(h-1/3)*255)];
+  }),
+  11: makeLUT(function(t) { // Sunset: deep purple → coral orange → pale peach
+    if(t<0.5) { var x=t/0.5;       return lerp3([55,0,80],[255,100,50],x); }
+               var x=(t-0.5)/0.5;  return lerp3([255,100,50],[255,240,190],x);
+  }),
+  12: makeLUT(function(t) { // Matrix: green phosphor
+    var g = Math.round(t * 255);
+    return [0, g, Math.round(g * 0.15)];
+  })
+};
 
 /* ── Apply look to full pixel buffer ─────────────── */
 function applyLook(data, width) {
   if (lookMode === 0) return;
-  var n = data.length;
+  var n = data.length, hsl, rgb, lu, r, g, b, row, blockRow, hShift;
   for (var i = 0; i < n; i += 4) {
-    var r = data[i], g = data[i+1], b = data[i+2];
-    var lu = (r*77 + g*150 + b*29) >> 8;
-    var hsl, rgb;
+    r = data[i]; g = data[i+1]; b = data[i+2];
+    lu = (r*77 + g*150 + b*29) >> 8;
+
     switch (lookMode) {
-      case 1: // Heat map
-        data[i]   = heatLUT[lu*3];
-        data[i+1] = heatLUT[lu*3+1];
-        data[i+2] = heatLUT[lu*3+2];
+      case 1: case 6: case 8: case 9: case 11: case 12: // LUT presets
+        var lut = LUTS[lookMode];
+        data[i]=lut[lu*3]; data[i+1]=lut[lu*3+1]; data[i+2]=lut[lu*3+2];
         break;
       case 2: // Monochrome
         data[i] = data[i+1] = data[i+2] = lu;
         break;
-      case 3: // Pop — push saturation hard
+      case 3: // Pop — crush saturation and contrast
         hsl = rgbToHsl(r, g, b);
         rgb = hslToRgb(hsl[0], Math.min(1, hsl[1] * 4 + 0.55), Math.max(0.08, Math.min(0.92, hsl[2])));
         data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
@@ -456,17 +511,40 @@ function applyLook(data, width) {
         rgb = hslToRgb((hsl[0] + 0.04) % 1, Math.min(1, hsl[1] * 2.2 + 0.25), hsl[2]);
         data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
         break;
-      case 5: // Glitch — banded hue shift + channel distortion
-        var row = Math.floor(i / 4 / width);
+      case 5: // Glitch — blocky hue bands + channel swap per block
+        row = Math.floor(i / 4 / width);
+        blockRow = Math.floor(row / 14); // 14-pixel blocks
         hsl = rgbToHsl(r, g, b);
-        var hShift = Math.sin(row * 0.29 + 1.4) * 0.18 + Math.cos(row * 0.073) * 0.09;
-        rgb = hslToRgb((hsl[0] + hShift + 1) % 1, Math.min(1, hsl[1] * 2.8 + 0.35), hsl[2]);
-        if ((row % 9) < 2) {
-          // BRG swap on some rows
-          data[i]=rgb[2]; data[i+1]=rgb[0]; data[i+2]=rgb[1];
-        } else {
-          data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        hShift = (((blockRow * 7 + 3) % 13) / 13 - 0.45) * 0.7;
+        rgb = hslToRgb((hsl[0] + hShift + 1) % 1, Math.min(1, hsl[1] * 3.2 + 0.4), hsl[2]);
+        var swapType = blockRow % 4;
+        if      (swapType === 1) { data[i]=rgb[2]; data[i+1]=rgb[0]; data[i+2]=rgb[1]; } // BRG
+        else if (swapType === 2) { data[i]=rgb[1]; data[i+1]=rgb[2]; data[i+2]=rgb[0]; } // GBR
+        else if (swapType === 3) { data[i]=rgb[2]; data[i+1]=rgb[1]; data[i+2]=rgb[0]; } // BGR
+        else                     { data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2]; } // RGB
+        break;
+      case 7: // Neon — max sat, electric push toward cyan/magenta/yellow
+        hsl = rgbToHsl(r, g, b);
+        var h7 = hsl[0];
+        // Snap hue toward nearest of cyan(0.5), magenta(0.83), yellow(0.16)
+        var targets = [0.16, 0.5, 0.83];
+        var best = targets[0], bestDist = 1;
+        for (var t7 = 0; t7 < 3; t7++) {
+          var d7 = Math.min(Math.abs(h7 - targets[t7]), 1 - Math.abs(h7 - targets[t7]));
+          if (d7 < bestDist) { bestDist = d7; best = targets[t7]; }
         }
+        h7 = h7 + (best - h7) * 0.45;
+        rgb = hslToRgb((h7 + 1) % 1, 1.0, Math.max(0.1, Math.min(0.9, hsl[2] * 1.3)));
+        data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        break;
+      case 10: // Ice — shift toward cool blue/cyan, boost highlights
+        hsl = rgbToHsl(r, g, b);
+        var h10 = 0.58 + (hsl[0] - 0.58) * 0.25; // pull hue toward 209° (cool blue)
+        rgb = hslToRgb((h10 + 1) % 1, Math.min(1, hsl[1] * 0.7 + 0.3), Math.min(1, hsl[2] * 1.15 + 0.05));
+        data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        break;
+      case 13: // Invert per-channel
+        data[i]=255-r; data[i+1]=255-g; data[i+2]=255-b;
         break;
     }
   }
@@ -535,7 +613,27 @@ function computeParams(dt) {
 
   // Animation overrides
   if (animOffEn && dt > 0) {
-    animOffPhase = (animOffPhase + dt * animOffSpd * 0.7) % 100;
+    var spd = dt * animOffSpd * 0.7;
+    switch (animOffDir) {
+      case 'fwd':
+        animOffPhase = (animOffPhase + spd) % 100;
+        break;
+      case 'rev':
+        animOffPhase = ((animOffPhase - spd) + 100) % 100;
+        break;
+      case 'bounce':
+        animOffPhase += spd * animOffBounceDir;
+        if (animOffPhase >= 100) { animOffPhase = 100; animOffBounceDir = -1; }
+        if (animOffPhase <= 0)   { animOffPhase = 0;   animOffBounceDir =  1; }
+        break;
+      case 'rand':
+        animOffRandTimer -= dt;
+        if (animOffRandTimer <= 0) {
+          animOffPhase = Math.random() * 100;
+          animOffRandTimer = Math.max(0.02, (100 - animOffSpd) / 100 * 2);
+        }
+        break;
+    }
     _off = animOffPhase;
   }
   if (animThrEn && dt > 0) {
@@ -566,7 +664,8 @@ function processFrame(source) {
   offCtxA.save();
   offCtxA.translate(rw / 2, rh / 2);
   offCtxA.rotate(-ang);
-  offCtxA.drawImage(source, -sw / 2, -sh / 2, sw, sh);
+  var CROP = 1.02; // 1% bleed each edge — hides black pixel noise at rotation boundary
+  offCtxA.drawImage(source, -(sw * CROP) / 2, -(sh * CROP) / 2, sw * CROP, sh * CROP);
   offCtxA.restore();
 
   var imgData = offCtxA.getImageData(0, 0, rw, rh);
@@ -770,6 +869,17 @@ document.querySelectorAll('#seg-sortmode .seg-btn').forEach(function (b) {
     ctrlMode = this.dataset.sortmode; // 'sim' or 'adv'
     document.getElementById('sort-sim').style.display = (ctrlMode === 'sim') ? '' : 'none';
     document.getElementById('sort-adv').style.display = (ctrlMode === 'adv') ? '' : 'none';
+  });
+});
+
+// Offset direction seg (Forward / Reverse / Bounce / Random)
+document.querySelectorAll('#seg-offdir .seg-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#seg-offdir .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    this.classList.add('active');
+    animOffDir = this.dataset.offdir;
+    animOffBounceDir = 1;
+    animOffRandTimer = 0;
   });
 });
 
