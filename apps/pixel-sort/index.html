@@ -185,73 +185,83 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 <div id="sheet">
   <div class="drag-row" id="drag-handle"><div class="drag-pill"></div></div>
   <div id="tabbar">
-    <button class="tab active" data-tab="sim">Simple</button>
-    <button class="tab" data-tab="sort">Sort</button>
+    <button class="tab active" data-tab="sort">Sort</button>
     <button class="tab" data-tab="anim">Anim</button>
     <button class="tab" data-tab="look">Look</button>
     <button class="tab" data-tab="inp">Input</button>
   </div>
   <div id="panel">
 
-    <!-- ── Simple tab ────────────────────────────── -->
-    <div class="page active" id="pg-sim">
-      <div class="sec">Tone</div>
-      <div class="seg" id="seg-tone">
-        <button class="seg-btn active" data-tone="shadows">Shadows</button>
-        <button class="seg-btn" data-tone="mid">Midtones</button>
-        <button class="seg-btn" data-tone="highlights">Highlights</button>
-      </div>
-      <div class="row">
-        <span class="lbl">Sensitivity</span>
-        <input type="range" id="sl-sens" min="0" max="100" value="60" step="1">
-        <span class="val" id="vl-sens">60</span>
-      </div>
-      <div class="divider"></div>
-      <div class="sec">Direction</div>
-      <div class="seg" id="seg-angmode">
-        <button class="seg-btn active" data-angmode="0">Horiz</button>
-        <button class="seg-btn" data-angmode="1">Vert</button>
-        <button class="seg-btn" data-angmode="2">Diag ↗</button>
-        <button class="seg-btn" data-angmode="3">Diag ↘</button>
-      </div>
-    </div>
+    <!-- ── Sort tab (Simple + Advanced) ─────────── -->
+    <div class="page active" id="pg-sort">
 
-    <!-- ── Sort (advanced) tab ───────────────────── -->
-    <div class="page" id="pg-sort">
-      <div class="sec">Threshold</div>
-      <div class="row">
-        <span class="lbl">Lower</span>
-        <input type="range" id="sl-lo" min="0" max="255" value="50" step="1">
-        <span class="val" id="vl-lo">50</span>
+      <!-- Mode switcher -->
+      <div class="seg" id="seg-sortmode" style="margin-bottom:20px;">
+        <button class="seg-btn active" data-sortmode="sim">Simple</button>
+        <button class="seg-btn" data-sortmode="adv">Advanced</button>
       </div>
-      <div class="row">
-        <span class="lbl">Upper</span>
-        <input type="range" id="sl-hi" min="0" max="255" value="200" step="1">
-        <span class="val" id="vl-hi">200</span>
+
+      <!-- Simple controls -->
+      <div id="sort-sim">
+        <div class="sec">Tone</div>
+        <div class="seg" id="seg-tone">
+          <button class="seg-btn active" data-tone="shadows">Shadows</button>
+          <button class="seg-btn" data-tone="mid">Midtones</button>
+          <button class="seg-btn" data-tone="highlights">Highlights</button>
+        </div>
+        <div class="row">
+          <span class="lbl">Sensitivity</span>
+          <input type="range" id="sl-sens" min="0" max="100" value="60" step="1">
+          <span class="val" id="vl-sens">60</span>
+        </div>
+        <div class="divider"></div>
+        <div class="sec">Direction</div>
+        <div class="seg" id="seg-angmode">
+          <button class="seg-btn active" data-angmode="0">Horiz</button>
+          <button class="seg-btn" data-angmode="1">Vert</button>
+          <button class="seg-btn" data-angmode="2">Diag ↗</button>
+          <button class="seg-btn" data-angmode="3">Diag ↘</button>
+        </div>
       </div>
-      <div class="toggle-row">
-        <span class="toggle-lbl">Sort Outside Range</span>
-        <div class="track" id="outside-track"><div class="thumb"></div></div>
+
+      <!-- Advanced controls -->
+      <div id="sort-adv" style="display:none;">
+        <div class="sec">Threshold</div>
+        <div class="row">
+          <span class="lbl">Lower</span>
+          <input type="range" id="sl-lo" min="0" max="255" value="50" step="1">
+          <span class="val" id="vl-lo">50</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Upper</span>
+          <input type="range" id="sl-hi" min="0" max="255" value="200" step="1">
+          <span class="val" id="vl-hi">200</span>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-lbl">Sort Outside Range</span>
+          <div class="track" id="outside-track"><div class="thumb"></div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="sec">Direction</div>
+        <div class="row">
+          <span class="lbl">Angle</span>
+          <input type="range" id="sl-ang" min="0" max="360" value="0" step="1">
+          <span class="val" id="vl-ang">0°</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Offset</span>
+          <input type="range" id="sl-off" min="0" max="100" value="0" step="1">
+          <span class="val" id="vl-off">0</span>
+        </div>
+        <div class="divider"></div>
+        <div class="sec">Resolution</div>
+        <div class="row">
+          <span class="lbl">Pixel Size</span>
+          <input type="range" id="sl-res" min="5" max="100" value="50" step="1">
+          <span class="val" id="vl-res">50%</span>
+        </div>
       </div>
-      <div class="divider"></div>
-      <div class="sec">Direction</div>
-      <div class="row">
-        <span class="lbl">Angle</span>
-        <input type="range" id="sl-ang" min="0" max="360" value="0" step="1">
-        <span class="val" id="vl-ang">0°</span>
-      </div>
-      <div class="row">
-        <span class="lbl">Offset</span>
-        <input type="range" id="sl-off" min="0" max="100" value="0" step="1">
-        <span class="val" id="vl-off">0</span>
-      </div>
-      <div class="divider"></div>
-      <div class="sec">Resolution</div>
-      <div class="row">
-        <span class="lbl">Pixel Size</span>
-        <input type="range" id="sl-res" min="5" max="100" value="50" step="1">
-        <span class="val" id="vl-res">50%</span>
-      </div>
+
     </div>
 
     <!-- ── Anim tab ──────────────────────────────── -->
@@ -752,7 +762,18 @@ document.getElementById('ctrl-btn').addEventListener('click', function () {
   sheetOpen = !sheetOpen; document.getElementById('sheet').classList.toggle('open', sheetOpen);
 });
 
-// Tabs — track ctrlMode
+// Sort mode switcher (Simple / Advanced)
+document.querySelectorAll('#seg-sortmode .seg-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#seg-sortmode .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    this.classList.add('active');
+    ctrlMode = this.dataset.sortmode; // 'sim' or 'adv'
+    document.getElementById('sort-sim').style.display = (ctrlMode === 'sim') ? '' : 'none';
+    document.getElementById('sort-adv').style.display = (ctrlMode === 'adv') ? '' : 'none';
+  });
+});
+
+// Tabs
 document.querySelectorAll('.tab').forEach(function (btn) {
   btn.addEventListener('click', function () {
     var tab = this.dataset.tab;
@@ -760,7 +781,6 @@ document.querySelectorAll('.tab').forEach(function (btn) {
     document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
     this.classList.add('active');
     document.getElementById('pg-' + tab).classList.add('active');
-    if (tab === 'sim' || tab === 'sort') ctrlMode = tab;
   });
 });
 
