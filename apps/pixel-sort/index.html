@@ -88,7 +88,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .page{display:none;}
 .page.active{display:block;}
 
-/* ── Controls ────────────────────────────────────── */
+/* ── Shared controls ─────────────────────────────── */
 .sec{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.15em;
   text-transform:uppercase;margin-bottom:12px;margin-top:4px;}
 .row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
@@ -109,13 +109,35 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   background:var(--dim);transition:transform .2s,background .2s;}
 .track.on .thumb{transform:translateX(18px);background:var(--cyan);}
 
-/* ── Input tab ───────────────────────────────────── */
-.src-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-.ibtn{padding:16px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surf2);
+/* ── Segment controls ────────────────────────────── */
+.seg{display:flex;background:var(--surf2);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.seg-btn{flex:1;padding:10px 3px;background:none;border:none;font-family:var(--mono);
+  font-size:10px;color:var(--dim);text-align:center;cursor:pointer;transition:all .15s;
+  letter-spacing:.04em;}
+.seg-btn:not(:last-child){border-right:1px solid var(--border);}
+.seg-btn.active{background:rgba(0,245,255,.12);color:var(--cyan);font-weight:700;}
+
+/* ── Input / look button grids ───────────────────── */
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.gbtn{padding:15px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surf2);
   color:var(--dim);font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
   transition:all .15s;text-align:center;}
-.ibtn:hover,.ibtn:active{background:rgba(0,245,255,.08);border-color:rgba(0,245,255,.3);color:var(--cyan);}
-.ibtn.active{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.45);color:var(--cyan);}
+.gbtn:hover,.gbtn:active{background:rgba(0,245,255,.08);border-color:rgba(0,245,255,.3);color:var(--cyan);}
+.gbtn.active{background:rgba(0,245,255,.1);border-color:rgba(0,245,255,.45);color:var(--cyan);}
+
+/* Look buttons get accent colors per preset */
+.lbtn-heat.active{background:rgba(255,80,0,.12);border-color:rgba(255,80,0,.45);color:#FF5000;}
+.lbtn-mono.active{background:rgba(232,237,245,.08);border-color:rgba(232,237,245,.35);color:var(--text);}
+.lbtn-pop.active{background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.45);color:var(--gold);}
+.lbtn-warm.active{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.45);color:var(--coral);}
+.lbtn-glitch.active{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.45);color:var(--violet);}
+
+/* Violet accent for anim tab */
+#pg-anim input[type=range]::-webkit-slider-thumb{background:var(--violet);box-shadow:0 0 8px rgba(139,92,246,.4);}
+#pg-anim .val{color:var(--violet);}
+#pg-anim .track.on{background:rgba(139,92,246,.3);border:1px solid rgba(139,92,246,.4);}
+#pg-anim .track.on .thumb{background:var(--violet);}
 </style>
 </head>
 <body>
@@ -163,13 +185,39 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 <div id="sheet">
   <div class="drag-row" id="drag-handle"><div class="drag-pill"></div></div>
   <div id="tabbar">
-    <button class="tab active" data-tab="sort">Sort</button>
+    <button class="tab active" data-tab="sim">Simple</button>
+    <button class="tab" data-tab="sort">Sort</button>
+    <button class="tab" data-tab="anim">Anim</button>
+    <button class="tab" data-tab="look">Look</button>
     <button class="tab" data-tab="inp">Input</button>
   </div>
   <div id="panel">
 
-    <!-- Sort tab -->
-    <div class="page active" id="pg-sort">
+    <!-- ── Simple tab ────────────────────────────── -->
+    <div class="page active" id="pg-sim">
+      <div class="sec">Tone</div>
+      <div class="seg" id="seg-tone">
+        <button class="seg-btn active" data-tone="shadows">Shadows</button>
+        <button class="seg-btn" data-tone="mid">Midtones</button>
+        <button class="seg-btn" data-tone="highlights">Highlights</button>
+      </div>
+      <div class="row">
+        <span class="lbl">Sensitivity</span>
+        <input type="range" id="sl-sens" min="0" max="100" value="60" step="1">
+        <span class="val" id="vl-sens">60</span>
+      </div>
+      <div class="divider"></div>
+      <div class="sec">Direction</div>
+      <div class="seg" id="seg-angmode">
+        <button class="seg-btn active" data-angmode="0">Horiz</button>
+        <button class="seg-btn" data-angmode="1">Vert</button>
+        <button class="seg-btn" data-angmode="2">Diag ↗</button>
+        <button class="seg-btn" data-angmode="3">Diag ↘</button>
+      </div>
+    </div>
+
+    <!-- ── Sort (advanced) tab ───────────────────── -->
+    <div class="page" id="pg-sort">
       <div class="sec">Threshold</div>
       <div class="row">
         <span class="lbl">Lower</span>
@@ -197,16 +245,66 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
         <input type="range" id="sl-off" min="0" max="100" value="0" step="1">
         <span class="val" id="vl-off">0</span>
       </div>
+      <div class="divider"></div>
+      <div class="sec">Resolution</div>
+      <div class="row">
+        <span class="lbl">Pixel Size</span>
+        <input type="range" id="sl-res" min="5" max="100" value="50" step="1">
+        <span class="val" id="vl-res">50%</span>
+      </div>
     </div>
 
-    <!-- Input tab -->
+    <!-- ── Anim tab ──────────────────────────────── -->
+    <div class="page" id="pg-anim">
+      <div class="sec">Offset</div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Animate Offset</span>
+        <div class="track" id="anim-off-track"><div class="thumb"></div></div>
+      </div>
+      <div class="row">
+        <span class="lbl">Speed</span>
+        <input type="range" id="sl-offspd" min="1" max="100" value="30" step="1">
+        <span class="val" id="vl-offspd">30</span>
+      </div>
+      <div class="divider"></div>
+      <div class="sec">Threshold</div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Animate Threshold</span>
+        <div class="track" id="anim-thr-track"><div class="thumb"></div></div>
+      </div>
+      <div class="row">
+        <span class="lbl">Speed</span>
+        <input type="range" id="sl-thrspd" min="1" max="100" value="20" step="1">
+        <span class="val" id="vl-thrspd">20</span>
+      </div>
+      <div class="row">
+        <span class="lbl">Amount</span>
+        <input type="range" id="sl-thramt" min="0" max="100" value="30" step="1">
+        <span class="val" id="vl-thramt">30</span>
+      </div>
+    </div>
+
+    <!-- ── Look tab ──────────────────────────────── -->
+    <div class="page" id="pg-look">
+      <div class="sec">Color Preset</div>
+      <div class="btn-grid">
+        <button class="gbtn active" data-look="0">None</button>
+        <button class="gbtn lbtn-heat" data-look="1">Heat Map</button>
+        <button class="gbtn lbtn-mono" data-look="2">Monochrome</button>
+        <button class="gbtn lbtn-pop" data-look="3">Pop Colors</button>
+        <button class="gbtn lbtn-warm" data-look="4">Saturate</button>
+        <button class="gbtn lbtn-glitch" data-look="5">Glitch</button>
+      </div>
+    </div>
+
+    <!-- ── Input tab ─────────────────────────────── -->
     <div class="page" id="pg-inp">
       <div class="sec">Source</div>
-      <div class="src-grid">
-        <button class="ibtn" id="inp-front">Front Camera</button>
-        <button class="ibtn" id="inp-rear">Rear Camera</button>
-        <button class="ibtn" id="inp-photo">Upload Photo</button>
-        <button class="ibtn" id="inp-video">Upload Video</button>
+      <div class="btn-grid">
+        <button class="gbtn" id="inp-front">Front Camera</button>
+        <button class="gbtn" id="inp-rear">Rear Camera</button>
+        <button class="gbtn" id="inp-photo">Upload Photo</button>
+        <button class="gbtn" id="inp-video">Upload Video</button>
       </div>
     </div>
 
@@ -217,180 +315,273 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 (function () {
 'use strict';
 
-/* ── State ───────────────────────────────────────── */
-var videoEl   = null;
-var imgEl     = null;
-var srcType   = null; // 'cam' | 'img' | 'vid'
+/* ── Control mode: which tab drives sort params ───── */
+var ctrlMode = 'sim'; // 'sim' | 'sort'
+
+/* ── Simple-mode params ──────────────────────────── */
+var toneMode       = 'shadows';
+var simpleThresh   = 60;   // sensitivity 0-100
+var simpleAngleSel = 0;    // 0=0° 1=90° 2=45° 3=135°
+
+/* ── Advanced-mode params ────────────────────────── */
+var loThresh  = 50;
+var hiThresh  = 200;
+var sortOut   = false;
+var angleDeg  = 0;
+var offsetPct = 0;
+var resolution = 50;  // 5-100 %
+
+/* ── Animation params ────────────────────────────── */
+var animOffEn  = false;
+var animOffSpd = 30;
+var animThrEn  = false;
+var animThrSpd = 20;
+var animThrAmt = 30;
+var animOffPhase = 0;
+var animThrPhase = 0;
+
+/* ── Look ────────────────────────────────────────── */
+var lookMode = 0;  // 0=none 1=heat 2=mono 3=pop 4=sat 5=glitch
+
+/* ── Source / runtime state ──────────────────────── */
+var videoEl  = null;
+var imgEl    = null;
+var srcType  = null;
 var facingMode = 'environment';
 var sheetOpen  = false;
 var animId     = null;
+var lastTs     = 0;
 
-/* ── Params ──────────────────────────────────────── */
-var loThresh   = 50;
-var hiThresh   = 200;
-var sortOut    = false; // sort outside range
-var angleDeg   = 0;
-var offsetPct  = 0;
+/* ── Derived per-frame params (set by computeParams) */
+var _lo = 50, _hi = 200, _ang = 0, _off = 0, _outside = false;
 
 /* ── Canvas ──────────────────────────────────────── */
 var canvas  = document.getElementById('c');
 var ctx     = canvas.getContext('2d');
-// Offscreen canvas for rotation
 var offA    = document.createElement('canvas');
 var offCtxA = offA.getContext('2d', { willReadFrequently: true });
 
-function resize() {
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener('resize', resize);
 
-/* ── Scratch buffers (avoid GC per frame) ────────── */
-var MAX_LEN   = 8192;
-var pixBuf    = new Uint8Array(MAX_LEN * 4);  // temp pixel rgba store
-var sortKeys  = new Float64Array(MAX_LEN);    // brightness key per pixel in span
-var sortIdx   = new Uint16Array(MAX_LEN);     // original indices
+/* ── Scratch buffers ─────────────────────────────── */
+var MAX_LEN = 8192;
+var pixBuf  = new Uint8Array(MAX_LEN * 4);
+
+/* ── Color helpers ───────────────────────────────── */
+function hue2rgb(p, q, t) {
+  if (t < 0) t += 1; if (t > 1) t -= 1;
+  if (t < 1/6) return p + (q - p) * 6 * t;
+  if (t < 1/2) return q;
+  if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+  return p;
+}
+function hslToRgb(h, s, l) {
+  if (s === 0) { var v = Math.round(l * 255); return [v, v, v]; }
+  var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  var p = 2 * l - q;
+  return [
+    Math.round(hue2rgb(p, q, h + 1/3) * 255),
+    Math.round(hue2rgb(p, q, h) * 255),
+    Math.round(hue2rgb(p, q, h - 1/3) * 255)
+  ];
+}
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b);
+  var l = (max + min) / 2, h = 0, s = 0;
+  if (max !== min) {
+    var d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [h, s, l];
+}
+
+/* ── Heat colormap ───────────────────────────────── */
+// Pre-bake 256-entry LUT for performance
+var heatLUT = (function () {
+  var lut = new Uint8Array(256 * 3);
+  for (var i = 0; i < 256; i++) {
+    var t = i / 255, r, g, b;
+    if (t < 0.2)       { r = Math.round(t*5*120);         g = 0;                          b = Math.round(t*5*220); }
+    else if (t < 0.4)  { var x=(t-0.2)*5; r=120+Math.round(x*135); g=0;                  b=Math.round((1-x)*220); }
+    else if (t < 0.6)  { var x=(t-0.4)*5; r=255;          g=Math.round(x*140);            b=0; }
+    else if (t < 0.8)  { var x=(t-0.6)*5; r=255;          g=140+Math.round(x*115);        b=0; }
+    else               { var x=(t-0.8)*5; r=255;          g=255;                          b=Math.round(x*255); }
+    lut[i*3]=r; lut[i*3+1]=g; lut[i*3+2]=b;
+  }
+  return lut;
+})();
+
+/* ── Apply look to full pixel buffer ─────────────── */
+function applyLook(data, width) {
+  if (lookMode === 0) return;
+  var n = data.length;
+  for (var i = 0; i < n; i += 4) {
+    var r = data[i], g = data[i+1], b = data[i+2];
+    var lu = (r*77 + g*150 + b*29) >> 8;
+    var hsl, rgb;
+    switch (lookMode) {
+      case 1: // Heat map
+        data[i]   = heatLUT[lu*3];
+        data[i+1] = heatLUT[lu*3+1];
+        data[i+2] = heatLUT[lu*3+2];
+        break;
+      case 2: // Monochrome
+        data[i] = data[i+1] = data[i+2] = lu;
+        break;
+      case 3: // Pop — push saturation hard
+        hsl = rgbToHsl(r, g, b);
+        rgb = hslToRgb(hsl[0], Math.min(1, hsl[1] * 4 + 0.55), Math.max(0.08, Math.min(0.92, hsl[2])));
+        data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        break;
+      case 4: // Saturate — warm boost
+        hsl = rgbToHsl(r, g, b);
+        rgb = hslToRgb((hsl[0] + 0.04) % 1, Math.min(1, hsl[1] * 2.2 + 0.25), hsl[2]);
+        data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        break;
+      case 5: // Glitch — banded hue shift + channel distortion
+        var row = Math.floor(i / 4 / width);
+        hsl = rgbToHsl(r, g, b);
+        var hShift = Math.sin(row * 0.29 + 1.4) * 0.18 + Math.cos(row * 0.073) * 0.09;
+        rgb = hslToRgb((hsl[0] + hShift + 1) % 1, Math.min(1, hsl[1] * 2.8 + 0.35), hsl[2]);
+        if ((row % 9) < 2) {
+          // BRG swap on some rows
+          data[i]=rgb[2]; data[i+1]=rgb[0]; data[i+2]=rgb[1];
+        } else {
+          data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2];
+        }
+        break;
+    }
+  }
+}
 
 /* ── Pixel sort algorithm ────────────────────────── */
-function luma(r, g, b) {
-  return (r * 77 + g * 150 + b * 29) >> 8; // fast integer 0.299r+0.587g+0.114b
+function lumaOf(r, g, b) { return (r * 77 + g * 150 + b * 29) >> 8; }
+
+function sortRow(data, rowStart, rowLen, lo, hi, offPct, outside) {
+  var offPx = Math.floor(offPct * rowLen * 0.01);
+  var i = offPx;
+  while (i < rowLen) {
+    var p  = rowStart + i * 4;
+    var br = lumaOf(data[p], data[p+1], data[p+2]);
+    var inRange = (br >= lo && br <= hi);
+    var isTarget = outside ? !inRange : inRange;
+    if (!isTarget) { i++; continue; }
+
+    var spanStart = i++;
+    while (i < rowLen) {
+      p  = rowStart + i * 4;
+      br = lumaOf(data[p], data[p+1], data[p+2]);
+      inRange = (br >= lo && br <= hi);
+      if ((outside ? !inRange : inRange) === false) break;
+      i++;
+    }
+    var spanLen = i - spanStart;
+    if (spanLen < 2) continue;
+    sortSpan(data, rowStart + spanStart * 4, spanLen);
+  }
 }
 
 function sortSpan(data, base, len) {
-  // Ensure buffers are large enough
   if (len > MAX_LEN) len = MAX_LEN;
-
-  // Copy pixels into pixBuf, record keys
+  // Copy to pixBuf and build sort pairs
+  var pairs = new Array(len);
   for (var j = 0; j < len; j++) {
-    var src = base + j * 4;
-    pixBuf[j*4]   = data[src];
-    pixBuf[j*4+1] = data[src+1];
-    pixBuf[j*4+2] = data[src+2];
-    pixBuf[j*4+3] = data[src+3];
-    sortKeys[j]   = luma(data[src], data[src+1], data[src+2]);
-    sortIdx[j]    = j;
+    var s = base + j * 4;
+    pixBuf[j*4]=data[s]; pixBuf[j*4+1]=data[s+1]; pixBuf[j*4+2]=data[s+2]; pixBuf[j*4+3]=data[s+3];
+    pairs[j] = [lumaOf(data[s], data[s+1], data[s+2]), j];
   }
-
-  // Sort indices by brightness (insertion sort — fast for near-sorted small spans)
-  // Switch to native sort for larger spans
-  if (len <= 32) {
-    for (var i = 1; i < len; i++) {
-      var keyI = sortKeys[i], idxI = sortIdx[i], k = i - 1;
-      while (k >= 0 && sortKeys[k] > keyI) {
-        sortKeys[k+1] = sortKeys[k];
-        sortIdx[k+1]  = sortIdx[k];
-        k--;
-      }
-      sortKeys[k+1] = keyI;
-      sortIdx[k+1]  = idxI;
-    }
-  } else {
-    // Build a sortable array of [key, origIdx] pairs using a plain array
-    var pairs = new Array(len);
-    for (var j = 0; j < len; j++) pairs[j] = [sortKeys[j], j];
-    pairs.sort(function(a, b) { return a[0] - b[0]; });
-    for (var j = 0; j < len; j++) sortIdx[j] = pairs[j][1];
-  }
-
-  // Write sorted pixels back
+  pairs.sort(function (a, b) { return a[0] - b[0]; });
   for (var j = 0; j < len; j++) {
-    var dst = base + j * 4;
-    var si  = sortIdx[j] * 4;
-    data[dst]   = pixBuf[si];
-    data[dst+1] = pixBuf[si+1];
-    data[dst+2] = pixBuf[si+2];
-    data[dst+3] = pixBuf[si+3];
+    var dst = base + j * 4, si = pairs[j][1] * 4;
+    data[dst]=pixBuf[si]; data[dst+1]=pixBuf[si+1]; data[dst+2]=pixBuf[si+2]; data[dst+3]=pixBuf[si+3];
   }
 }
 
-function sortRow(data, rowStart, rowLen) {
-  var lo      = loThresh;
-  var hi      = hiThresh;
-  var outside = sortOut;
-  var offPx   = Math.floor(offsetPct * rowLen * 0.01);
-  var i       = offPx;
+/* ── Compute per-frame params ────────────────────── */
+function computeParams(dt) {
+  if (ctrlMode === 'sim') {
+    // Map tone → center ± halfspan scaled by sensitivity
+    var toneCenters = { shadows: 42, mid: 127, highlights: 212 };
+    var toneHalfs   = { shadows: 43, mid: 43,  highlights: 43  };
+    var c  = toneCenters[toneMode] || 127;
+    var hw = toneHalfs[toneMode] * simpleThresh / 100;
+    _lo = Math.max(0, c - hw);
+    _hi = Math.min(255, c + hw);
+    _ang = [0, 90, 45, 135][simpleAngleSel] || 0;
+    _outside = false;
+  } else {
+    _lo = loThresh; _hi = hiThresh;
+    _ang = angleDeg; _outside = sortOut;
+  }
+  _off = offsetPct;
 
-  while (i < rowLen) {
-    var p      = rowStart + i * 4;
-    var br     = luma(data[p], data[p+1], data[p+2]);
-    var inRng  = (br >= lo && br <= hi);
-    var target = outside ? !inRng : inRng;
-
-    if (!target) { i++; continue; }
-
-    // Span start — walk to find end
-    var spanStart = i;
-    i++;
-    while (i < rowLen) {
-      p     = rowStart + i * 4;
-      br    = luma(data[p], data[p+1], data[p+2]);
-      inRng = (br >= lo && br <= hi);
-      if ((outside ? !inRng : inRng) === false) break;
-      i++;
-    }
-
-    var spanLen = i - spanStart;
-    if (spanLen < 2) continue;
-
-    sortSpan(data, rowStart + spanStart * 4, spanLen);
+  // Animation overrides
+  if (animOffEn && dt > 0) {
+    animOffPhase = (animOffPhase + dt * animOffSpd * 0.7) % 100;
+    _off = animOffPhase;
+  }
+  if (animThrEn && dt > 0) {
+    animThrPhase += dt * animThrSpd * 0.06;
+    var osc = Math.sin(animThrPhase) * (animThrAmt / 100) * 127;
+    _lo = Math.max(0, Math.min(255, _lo + osc));
+    _hi = Math.max(0, Math.min(255, _hi + osc));
+    if (_lo > _hi) { var tmp = _lo; _lo = _hi; _hi = tmp; }
   }
 }
 
 /* ── Process frame ───────────────────────────────── */
 function processFrame(source) {
-  var W   = canvas.width;
-  var H   = canvas.height;
-  var rad = angleDeg * Math.PI / 180;
+  var W = canvas.width, H = canvas.height;
+  var ang = _ang * Math.PI / 180;
+  var scale = Math.max(0.04, resolution / 100);
 
-  // Scale for performance (half resolution on axis-aligned, full on diagonal angles)
-  var diagScale = Math.abs(Math.sin(rad * 2)); // 0 at 0/90, 1 at 45
-  var scale = 0.5 - diagScale * 0.15; // 0.35–0.5
+  var sw = Math.round(W * scale) || 1;
+  var sh = Math.round(H * scale) || 1;
+  var cosA = Math.abs(Math.cos(ang));
+  var sinA = Math.abs(Math.sin(ang));
+  var rw = Math.ceil(sw * cosA + sh * sinA) || 1;
+  var rh = Math.ceil(sw * sinA + sh * cosA) || 1;
 
-  var sw = Math.round(W * scale);
-  var sh = Math.round(H * scale);
+  if (offA.width !== rw || offA.height !== rh) { offA.width = rw; offA.height = rh; }
 
-  // Rotated bounding box
-  var cosA = Math.abs(Math.cos(rad));
-  var sinA = Math.abs(Math.sin(rad));
-  var rw   = Math.ceil(sw * cosA + sh * sinA);
-  var rh   = Math.ceil(sw * sinA + sh * cosA);
-
-  if (offA.width !== rw || offA.height !== rh) {
-    offA.width  = rw;
-    offA.height = rh;
-  }
-
-  // Draw source rotated by -angle into offscreen canvas
   offCtxA.clearRect(0, 0, rw, rh);
   offCtxA.save();
   offCtxA.translate(rw / 2, rh / 2);
-  offCtxA.rotate(-rad);
+  offCtxA.rotate(-ang);
   offCtxA.drawImage(source, -sw / 2, -sh / 2, sw, sh);
   offCtxA.restore();
 
-  // Sort rows on the rotated pixel data
   var imgData = offCtxA.getImageData(0, 0, rw, rh);
   var data    = imgData.data;
+
   for (var row = 0; row < rh; row++) {
-    sortRow(data, row * rw * 4, rw);
+    sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside);
   }
+  applyLook(data, rw);
+
   offCtxA.putImageData(imgData, 0, 0);
 
-  // Rotate the sorted result back to display canvas
   ctx.clearRect(0, 0, W, H);
   ctx.save();
   ctx.translate(W / 2, H / 2);
-  ctx.rotate(rad);
-  // Scale back up to fill display
-  var drawW = rw / scale;
-  var drawH = rh / scale;
-  ctx.drawImage(offA, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.rotate(ang);
+  ctx.drawImage(offA, -rw / 2 / scale, -rh / 2 / scale, rw / scale, rh / scale);
   ctx.restore();
 }
 
 /* ── Render loop ─────────────────────────────────── */
-function tick() {
+function tick(ts) {
+  var dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.1) : 0;
+  lastTs = ts;
+  computeParams(dt);
   if ((srcType === 'cam' || srcType === 'vid') && videoEl && videoEl.readyState >= 2) {
     processFrame(videoEl);
   } else if (srcType === 'img' && imgEl && imgEl.complete) {
@@ -398,18 +589,13 @@ function tick() {
   }
   animId = requestAnimationFrame(tick);
 }
+function startLoop() { if (animId) cancelAnimationFrame(animId); lastTs = 0; animId = requestAnimationFrame(tick); }
 
-function startLoop() {
-  if (animId) cancelAnimationFrame(animId);
-  animId = requestAnimationFrame(tick);
-}
-
-/* ── Camera ──────────────────────────────────────── */
+/* ── Source management ───────────────────────────── */
 function stopCurrentSource() {
   if (videoEl) {
     if (videoEl.srcObject) videoEl.srcObject.getTracks().forEach(function (t) { t.stop(); });
-    videoEl.pause();
-    videoEl = null;
+    videoEl.pause(); videoEl = null;
   }
   imgEl = null;
 }
@@ -419,53 +605,34 @@ function startCamera(facing) {
   stopCurrentSource();
   if (!navigator.mediaDevices) { alert('Camera not available'); return; }
   navigator.mediaDevices.getUserMedia({
-    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false
+    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
   }).then(function (stream) {
     videoEl = document.createElement('video');
-    videoEl.srcObject  = stream;
-    videoEl.autoplay   = true;
-    videoEl.playsInline = true;
-    videoEl.muted      = true;
+    videoEl.srcObject  = stream; videoEl.autoplay = true;
+    videoEl.playsInline = true; videoEl.muted = true;
     videoEl.onloadedmetadata = function () {
-      videoEl.play();
-      srcType = 'cam';
-      showUI('CAM', true, facing === 'user');
-      startLoop();
+      videoEl.play(); srcType = 'cam';
+      showUI('CAM', true, facing === 'user'); startLoop();
     };
   }).catch(function (e) { alert('Camera error: ' + e.message); });
 }
 
-/* ── Photo / video loaders ───────────────────────── */
 function loadPhoto(file) {
   stopCurrentSource();
-  var url = URL.createObjectURL(file);
   imgEl = new Image();
-  imgEl.onload = function () {
-    srcType = 'img';
-    showUI('IMG', false, false);
-    startLoop();
-  };
-  imgEl.src = url;
+  imgEl.onload = function () { srcType = 'img'; showUI('IMG', false, false); startLoop(); };
+  imgEl.src = URL.createObjectURL(file);
 }
 
 function loadVideo(file) {
   stopCurrentSource();
   videoEl = document.createElement('video');
-  videoEl.src        = URL.createObjectURL(file);
-  videoEl.autoplay   = true;
-  videoEl.loop       = true;
-  videoEl.playsInline = true;
-  videoEl.muted      = true;
-  videoEl.onloadedmetadata = function () {
-    videoEl.play();
-    srcType = 'vid';
-    showUI('VID', false, false);
-    startLoop();
-  };
+  videoEl.src = URL.createObjectURL(file);
+  videoEl.autoplay = true; videoEl.loop = true; videoEl.playsInline = true; videoEl.muted = true;
+  videoEl.onloadedmetadata = function () { videoEl.play(); srcType = 'vid'; showUI('VID', false, false); startLoop(); };
 }
 
-/* ── UI state ────────────────────────────────────── */
+/* ── UI helpers ──────────────────────────────────── */
 function showUI(lbl, live, isFront) {
   document.getElementById('landing').style.display = 'none';
   document.getElementById('topbar').style.display  = 'flex';
@@ -473,22 +640,15 @@ function showUI(lbl, live, isFront) {
   document.getElementById('src-lbl').textContent   = lbl;
   document.getElementById('src-dot').className     = 'dot' + (live ? ' on' : '');
   document.getElementById('flip-btn').style.display = (lbl === 'CAM') ? '' : 'none';
-
-  // Highlight active input button
-  document.querySelectorAll('.ibtn').forEach(function (b) { b.classList.remove('active'); });
-  if (lbl === 'CAM') {
-    document.getElementById(isFront ? 'inp-front' : 'inp-rear').classList.add('active');
-  } else if (lbl === 'IMG') {
-    document.getElementById('inp-photo').classList.add('active');
-  } else if (lbl === 'VID') {
-    document.getElementById('inp-video').classList.add('active');
-  }
+  document.querySelectorAll('#pg-inp .gbtn').forEach(function (b) { b.classList.remove('active'); });
+  if (lbl === 'CAM')      document.getElementById(isFront ? 'inp-front' : 'inp-rear').classList.add('active');
+  else if (lbl === 'IMG') document.getElementById('inp-photo').classList.add('active');
+  else if (lbl === 'VID') document.getElementById('inp-video').classList.add('active');
 }
 
 function reset() {
   if (animId) { cancelAnimationFrame(animId); animId = null; }
-  stopCurrentSource();
-  srcType = null;
+  stopCurrentSource(); srcType = null;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   document.getElementById('landing').style.display = 'flex';
   document.getElementById('topbar').style.display  = 'none';
@@ -498,72 +658,101 @@ function reset() {
   sheetOpen = false;
 }
 
-/* ── Download ────────────────────────────────────── */
 function downloadFrame() {
   canvas.toBlob(function (blob) {
     var url = URL.createObjectURL(blob);
-    var a   = document.createElement('a');
-    a.href     = url;
-    a.download = 'pixelsort_' + Date.now() + '.png';
+    var a = document.createElement('a');
+    a.href = url; a.download = 'pixelsort_' + Date.now() + '.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }, 'image/png');
 }
 
 /* ── Bind controls ───────────────────────────────── */
-function bindSlider(id, valId, onInput) {
-  var el = document.getElementById(id);
-  var vl = document.getElementById(valId);
-  el.addEventListener('input', function () { onInput(parseFloat(el.value), vl); });
+function bs(id, valId, fn) {
+  var el = document.getElementById(id), vl = document.getElementById(valId);
+  el.addEventListener('input', function () { fn(parseFloat(el.value), vl); });
 }
 
-bindSlider('sl-lo',  'vl-lo',  function (v, vl) { loThresh  = v; vl.textContent = Math.round(v); });
-bindSlider('sl-hi',  'vl-hi',  function (v, vl) { hiThresh  = v; vl.textContent = Math.round(v); });
-bindSlider('sl-ang', 'vl-ang', function (v, vl) { angleDeg  = v; vl.textContent = Math.round(v) + '°'; });
-bindSlider('sl-off', 'vl-off', function (v, vl) { offsetPct = v; vl.textContent = Math.round(v); });
+// Simple tab
+bs('sl-sens', 'vl-sens', function (v, vl) { simpleThresh = v; vl.textContent = Math.round(v); });
+
+document.querySelectorAll('#seg-tone .seg-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#seg-tone .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    this.classList.add('active'); toneMode = this.dataset.tone;
+  });
+});
+document.querySelectorAll('#seg-angmode .seg-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#seg-angmode .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    this.classList.add('active'); simpleAngleSel = parseInt(this.dataset.angmode);
+  });
+});
+
+// Sort (advanced) tab
+bs('sl-lo',  'vl-lo',  function (v, vl) { loThresh  = v; vl.textContent = Math.round(v); });
+bs('sl-hi',  'vl-hi',  function (v, vl) { hiThresh  = v; vl.textContent = Math.round(v); });
+bs('sl-ang', 'vl-ang', function (v, vl) { angleDeg  = v; vl.textContent = Math.round(v) + '°'; });
+bs('sl-off', 'vl-off', function (v, vl) { offsetPct = v; vl.textContent = Math.round(v); });
+bs('sl-res', 'vl-res', function (v, vl) { resolution = v; vl.textContent = Math.round(v) + '%'; });
 
 document.getElementById('outside-track').addEventListener('click', function () {
-  this.classList.toggle('on');
-  sortOut = this.classList.contains('on');
+  this.classList.toggle('on'); sortOut = this.classList.contains('on');
 });
 
-/* Landing buttons */
-document.getElementById('upload-zone').addEventListener('click', function (e) {
-  e.stopPropagation();
-  document.getElementById('src-reveal').classList.toggle('open');
+// Anim tab
+document.getElementById('anim-off-track').addEventListener('click', function () {
+  this.classList.toggle('on'); animOffEn = this.classList.contains('on');
+  if (!animOffEn) animOffPhase = offsetPct;
 });
-document.getElementById('btn-cam').addEventListener('click', function () { startCamera('environment'); });
-document.getElementById('btn-img').addEventListener('click', function () { document.getElementById('fi-img').click(); });
-document.getElementById('btn-vid').addEventListener('click', function () { document.getElementById('fi-vid').click(); });
+document.getElementById('anim-thr-track').addEventListener('click', function () {
+  this.classList.toggle('on'); animThrEn = this.classList.contains('on');
+  if (!animThrEn) animThrPhase = 0;
+});
+bs('sl-offspd', 'vl-offspd', function (v, vl) { animOffSpd = v; vl.textContent = Math.round(v); });
+bs('sl-thrspd', 'vl-thrspd', function (v, vl) { animThrSpd = v; vl.textContent = Math.round(v); });
+bs('sl-thramt', 'vl-thramt', function (v, vl) { animThrAmt = v; vl.textContent = Math.round(v); });
 
-document.getElementById('fi-img').addEventListener('change', function (e) {
-  var f = e.target.files[0]; if (!f) return;
-  loadPhoto(f); e.target.value = '';
-});
-document.getElementById('fi-vid').addEventListener('change', function (e) {
-  var f = e.target.files[0]; if (!f) return;
-  loadVideo(f); e.target.value = '';
-});
-
-/* Top bar */
-document.getElementById('back-btn').addEventListener('click', reset);
-document.getElementById('flip-btn').addEventListener('click', function () {
-  facingMode = (facingMode === 'environment') ? 'user' : 'environment';
-  startCamera(facingMode);
-});
-document.getElementById('dl-btn').addEventListener('click', downloadFrame);
-document.getElementById('ctrl-btn').addEventListener('click', function () {
-  sheetOpen = !sheetOpen;
-  document.getElementById('sheet').classList.toggle('open', sheetOpen);
+// Look tab
+document.querySelectorAll('#pg-look .gbtn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#pg-look .gbtn').forEach(function (x) { x.classList.remove('active'); });
+    this.classList.add('active'); lookMode = parseInt(this.dataset.look);
+  });
 });
 
-/* Input tab */
+// Input tab
 document.getElementById('inp-front').addEventListener('click', function () { startCamera('user'); });
 document.getElementById('inp-rear').addEventListener('click',  function () { startCamera('environment'); });
 document.getElementById('inp-photo').addEventListener('click', function () { document.getElementById('fi-img').click(); });
 document.getElementById('inp-video').addEventListener('click', function () { document.getElementById('fi-vid').click(); });
 
-/* Tabs */
+// Landing
+document.getElementById('upload-zone').addEventListener('click', function (e) {
+  e.stopPropagation(); document.getElementById('src-reveal').classList.toggle('open');
+});
+document.getElementById('btn-cam').addEventListener('click', function () { startCamera('environment'); });
+document.getElementById('btn-img').addEventListener('click', function () { document.getElementById('fi-img').click(); });
+document.getElementById('btn-vid').addEventListener('click', function () { document.getElementById('fi-vid').click(); });
+document.getElementById('fi-img').addEventListener('change', function (e) {
+  var f = e.target.files[0]; if (!f) return; loadPhoto(f); e.target.value = '';
+});
+document.getElementById('fi-vid').addEventListener('change', function (e) {
+  var f = e.target.files[0]; if (!f) return; loadVideo(f); e.target.value = '';
+});
+
+// Top bar
+document.getElementById('back-btn').addEventListener('click', reset);
+document.getElementById('flip-btn').addEventListener('click', function () {
+  facingMode = (facingMode === 'environment') ? 'user' : 'environment'; startCamera(facingMode);
+});
+document.getElementById('dl-btn').addEventListener('click', downloadFrame);
+document.getElementById('ctrl-btn').addEventListener('click', function () {
+  sheetOpen = !sheetOpen; document.getElementById('sheet').classList.toggle('open', sheetOpen);
+});
+
+// Tabs — track ctrlMode
 document.querySelectorAll('.tab').forEach(function (btn) {
   btn.addEventListener('click', function () {
     var tab = this.dataset.tab;
@@ -571,13 +760,13 @@ document.querySelectorAll('.tab').forEach(function (btn) {
     document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
     this.classList.add('active');
     document.getElementById('pg-' + tab).classList.add('active');
+    if (tab === 'sim' || tab === 'sort') ctrlMode = tab;
   });
 });
 
-/* Drag handle + swipe */
+// Drag handle + swipe
 document.getElementById('drag-handle').addEventListener('click', function () {
-  sheetOpen = !sheetOpen;
-  document.getElementById('sheet').classList.toggle('open', sheetOpen);
+  sheetOpen = !sheetOpen; document.getElementById('sheet').classList.toggle('open', sheetOpen);
 });
 var sheet = document.getElementById('sheet'), ty0 = 0;
 sheet.addEventListener('touchstart', function (e) { ty0 = e.touches[0].clientY; }, { passive: true });
