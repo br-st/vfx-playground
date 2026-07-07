@@ -281,13 +281,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
         </div>
       </div>
 
-      <!-- Always-visible Randomize section -->
+      <!-- Always-visible Oversample section -->
       <div class="divider"></div>
-      <div class="sec">Randomize</div>
+      <div class="sec">Oversample</div>
       <div class="row">
         <span class="lbl">Amount</span>
-        <input type="range" id="sl-rand" min="0" max="100" value="0" step="1">
-        <span class="val" id="vl-rand">0</span>
+        <input type="range" id="sl-over" min="0" max="100" value="0" step="1">
+        <span class="val" id="vl-over">0</span>
       </div>
 
     </div>
@@ -325,6 +325,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
         <span class="lbl">Amount</span>
         <input type="range" id="sl-thramt" min="0" max="100" value="30" step="1">
         <span class="val" id="vl-thramt">30</span>
+      </div>
+      <div class="divider"></div>
+      <div class="sec">Randomize</div>
+      <div class="row">
+        <span class="lbl">Amount</span>
+        <input type="range" id="sl-rand" min="0" max="100" value="0" step="1">
+        <span class="val" id="vl-rand">0</span>
       </div>
     </div>
 
@@ -382,8 +389,9 @@ var sortOut   = false;
 var angleDeg  = 0;
 var offsetPct = 0;
 var resolution = 50;  // 5-100 %
-var randAmount = 0;   // 0-100 (0=uniform, 100=max block/source variance)
-var _frameSeed = 0;   // updated each frame; drives per-block randomness
+var randAmount    = 0;   // 0-100 (0=uniform, 100=max block/source variance)
+var oversampleAmt = 0;   // 0-100 (0=off, 100=max scattered block oversampling)
+var _frameSeed    = 0;   // updated each frame; drives per-block randomness
 
 /* ── Animation params ────────────────────────────── */
 var animOffEn       = false;
@@ -601,6 +609,53 @@ function applyLook(data, width) {
   }
 }
 
+/* ── Oversample pass ─────────────────────────────── */
+// Scatters variable-size blocks (1×1 … maxBS×maxBS) across sorted pixels
+// that fall within the active threshold range, creating a mosaic/painterly effect.
+function applyOversample(data, width, height) {
+  if (oversampleAmt <= 0) return;
+  var t      = oversampleAmt / 100;
+  var maxBS  = Math.max(2, Math.round(t * 9) + 1); // 2–10px max block side at 0–100
+  var numOps = Math.floor(width * height * t * 0.12) | 0; // ~12% coverage at 100
+  var seed   = (_frameSeed ^ 0xABCD1234) >>> 0;
+
+  for (var n = 0; n < numOps; n++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    var sx = seed % width;
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    var sy = seed % height;
+
+    // Sample color at source pixel
+    var sp = (sy * width + sx) * 4;
+    var r  = data[sp], g = data[sp + 1], b = data[sp + 2];
+
+    // Only paint where the pixel is in the active sort range
+    var lu      = (r * 77 + g * 150 + b * 29) >> 8;
+    var inRange = (lu >= _lo && lu <= _hi);
+    if (!(_outside ? !inRange : inRange)) continue;
+
+    // Random block size 1..maxBS (weighted toward smaller)
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    var bs1 = 1 + (seed % maxBS);
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    var bs2 = 1 + (seed % maxBS);
+    // Square-ish blocks: snap both dims to the smaller of the two rolls so we get
+    // a mix of 1×1 through maxBS×maxBS, matching the user's described pattern
+    var bw = Math.min(bs1, bs2 + 1);
+    var bh = Math.min(bs2, bs1 + 1);
+
+    // Paint block (clipped to canvas bounds)
+    var xEnd = Math.min(sx + bw, width);
+    var yEnd = Math.min(sy + bh, height);
+    for (var py = sy; py < yEnd; py++) {
+      for (var px = sx; px < xEnd; px++) {
+        var pp = (py * width + px) * 4;
+        data[pp] = r; data[pp + 1] = g; data[pp + 2] = b;
+      }
+    }
+  }
+}
+
 /* ── Pixel sort algorithm ────────────────────────── */
 function lumaOf(r, g, b) { return (r * 77 + g * 150 + b * 29) >> 8; }
 
@@ -776,6 +831,7 @@ function processFrame(source) {
     sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside, row);
   }
   applyLook(data, rw);
+  applyOversample(data, rw, rh);
 
   offCtxA.putImageData(imgData, 0, 0);
 
@@ -915,7 +971,8 @@ bs('sl-res-sim', 'vl-res-sim', function (v, vl) {
   document.getElementById('sl-res').value = v;
   document.getElementById('vl-res').textContent = Math.round(v) + '%';
 });
-bs('sl-rand', 'vl-rand', function (v, vl) { randAmount = v; vl.textContent = Math.round(v); });
+bs('sl-rand', 'vl-rand', function (v, vl) { randAmount    = v; vl.textContent = Math.round(v); });
+bs('sl-over', 'vl-over', function (v, vl) { oversampleAmt = v; vl.textContent = Math.round(v); });
 
 document.getElementById('outside-track').addEventListener('click', function () {
   this.classList.toggle('on'); sortOut = this.classList.contains('on');
