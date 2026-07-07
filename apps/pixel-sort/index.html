@@ -136,9 +136,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .lbtn-neon.active  {background:rgba(255,0,200,.12);border-color:rgba(255,0,200,.45);color:#FF00C8;}
 .lbtn-duo.active   {background:rgba(100,0,255,.12);border-color:rgba(100,0,255,.45);color:#8844FF;}
 .lbtn-acid.active  {background:rgba(200,255,0,.12);border-color:rgba(200,255,0,.45);color:#C8FF00;}
-.lbtn-ice.active   {background:rgba(100,200,255,.12);border-color:rgba(100,200,255,.45);color:#64C8FF;}
-.lbtn-sunset.active{background:rgba(255,140,60,.12);border-color:rgba(255,140,60,.45);color:#FF8C3C;}
-.lbtn-matrix.active{background:rgba(0,200,0,.12);border-color:rgba(0,200,0,.45);color:#00C800;}
+.lbtn-xray.active  {background:rgba(0,200,255,.12);border-color:rgba(0,200,255,.45);color:#00C8FF;}
 .lbtn-invert.active{background:rgba(232,237,245,.06);border-color:rgba(232,237,245,.28);color:var(--dim);}
 
 /* 3-column grid for Look tab */
@@ -357,7 +355,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:5px;}
         <button class="gbtn lbtn-neon"   data-look="7">Neon</button>
         <button class="gbtn lbtn-duo"    data-look="8">Duotone</button>
         <button class="gbtn lbtn-acid"   data-look="9">Acid</button>
-        <button class="gbtn lbtn-sunset" data-look="11">Sunset</button>
+        <button class="gbtn lbtn-xray"   data-look="10">X-Ray</button>
         <button class="gbtn lbtn-invert" data-look="13">Invert</button>
       </div>
       <div class="divider"></div>
@@ -528,22 +526,12 @@ var LUTS = {
     var q=0.5, p=0;
     function hr(u){u=(u%1+1)%1; if(u<1/6)return p+(q-p)*6*u; if(u<1/2)return q; if(u<2/3)return p+(q-p)*(2/3-u)*6; return p;}
     return [Math.round(hr(h+1/3)*255), Math.round(hr(h)*255), Math.round(hr(h-1/3)*255)];
-  }),
-  11: makeLUT(function(t) { // Sunset: palette A (shadow) → midpoint → palette B (highlight)
-    var mid = lerp3(colorA, colorB, 0.5);
-    if(t < 0.5) { return lerp3(colorA, mid, t / 0.5); }
-                  return lerp3(mid, colorB, (t - 0.5) / 0.5);
   })
 };
 
-// Rebuild LUTs that depend on colorA / colorB
+// Rebuild LUTs that depend on colorA / colorB (Duotone; X-ray uses them live)
 function rebuildPaletteLUTs() {
-  LUTS[8]  = makeLUT(function(t) { return lerp3(colorA, colorB, t); });
-  LUTS[11] = makeLUT(function(t) {
-    var mid = lerp3(colorA, colorB, 0.5);
-    if(t < 0.5) { return lerp3(colorA, mid, t / 0.5); }
-                  return lerp3(mid, colorB, (t - 0.5) / 0.5);
-  });
+  LUTS[8] = makeLUT(function(t) { return lerp3(colorA, colorB, t); });
 }
 
 function hexToRgb(hex) {
@@ -577,7 +565,7 @@ function applyLook(data, width) {
     lu = (r*77 + g*150 + b*29) >> 8;
 
     switch (lookMode) {
-      case 1: case 6: case 8: case 9: case 11: case 12: // LUT presets
+      case 1: case 6: case 8: case 9: // LUT presets
         var lut = LUTS[lookMode];
         data[i]=lut[lu*3]; data[i+1]=lut[lu*3+1]; data[i+2]=lut[lu*3+2];
         break;
@@ -627,6 +615,48 @@ function applyLook(data, width) {
       case 13: // Invert per-channel
         data[i]=255-r; data[i+1]=255-g; data[i+2]=255-b;
         break;
+    }
+  }
+}
+
+/* ── X-Ray look (Sobel edge → palette A→B) ──────── */
+// Runs after applyLook when lookMode === 10.
+// Pre-computes a luma map, then for each pixel computes Sobel gradient magnitude
+// and maps it through colorA (no edge) → colorB (sharp edge), replacing the pixel.
+function applyXray(data, width, height) {
+  var n = width * height;
+
+  // Build luma map for sampling (avoid in-place read/write conflict)
+  var lumas = new Uint8Array(n);
+  for (var k = 0; k < n; k++) {
+    var ki = k * 4;
+    lumas[k] = (data[ki] * 77 + data[ki + 1] * 150 + data[ki + 2] * 29) >> 8;
+  }
+
+  var caR = colorA[0], caG = colorA[1], caB = colorA[2];
+  var cbR = colorB[0], cbG = colorB[1], cbB = colorB[2];
+  var w1 = width - 1, h1 = height - 1;
+
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      var i = (y * width + x) * 4;
+
+      // Clamped neighbor indices
+      var x0 = x > 0 ? x - 1 : 0,  x2 = x < w1 ? x + 1 : w1;
+      var y0 = y > 0 ? y - 1 : 0,   y2 = y < h1 ? y + 1 : h1;
+
+      var tl = lumas[y0 * width + x0], tc = lumas[y0 * width + x], tr = lumas[y0 * width + x2];
+      var ml = lumas[y  * width + x0],                               mr = lumas[y  * width + x2];
+      var bl = lumas[y2 * width + x0], bc = lumas[y2 * width + x], bR = lumas[y2 * width + x2];
+
+      var gx = -tl - 2 * ml - bl + tr + 2 * mr + bR;
+      var gy = -tl - 2 * tc - tr + bl + 2 * bc + bR;
+      // Normalize: theoretical max ~2885; divide by ~900 for punchy edges
+      var mag = Math.min(1, Math.sqrt(gx * gx + gy * gy) / 900);
+
+      data[i]     = (caR + (cbR - caR) * mag + 0.5) | 0;
+      data[i + 1] = (caG + (cbG - caG) * mag + 0.5) | 0;
+      data[i + 2] = (caB + (cbB - caB) * mag + 0.5) | 0;
     }
   }
 }
@@ -860,6 +890,7 @@ function processFrame(source) {
     sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside, row);
   }
   applyLook(data, rw);
+  if (lookMode === 10) applyXray(data, rw, rh);
   applyOversample(data, rw, rh);
 
   offCtxA.putImageData(imgData, 0, 0);
