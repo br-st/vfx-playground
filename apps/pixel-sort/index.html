@@ -383,6 +383,7 @@ var angleDeg  = 0;
 var offsetPct = 0;
 var resolution = 50;  // 5-100 %
 var randAmount = 0;   // 0-100 (0=uniform, 100=max block/source variance)
+var _frameSeed = 0;   // updated each frame; drives per-block randomness
 
 /* ── Animation params ────────────────────────────── */
 var animOffEn       = false;
@@ -518,6 +519,24 @@ var LUTS = {
 function applyLook(data, width) {
   if (lookMode === 0) return;
   var n = data.length, hsl, rgb, lu, r, g, b, row, blockRow, hShift;
+
+  // Glitch: pre-build variable-height block map so each row lookup is O(1).
+  // Seed from performance.now() divided into ~8fps slices → blocks re-randomize at glitch rate.
+  var glitchRowBlock = null;
+  if (lookMode === 5) {
+    var totalRows = (n >> 2) / width | 0;
+    glitchRowBlock = new Uint16Array(totalRows);
+    var gs = (((performance.now() / 125) | 0) * 2654435761) >>> 0; // ~8 reseeds/sec
+    var gi = 0, gr = 0;
+    while (gr < totalRows) {
+      gs = (gs * 1664525 + 1013904223) >>> 0;
+      var gSize = 5 + (gs % 24); // blocks range 5–28px tall
+      var gEnd = Math.min(gr + gSize, totalRows);
+      for (var gk = gr; gk < gEnd; gk++) glitchRowBlock[gk] = gi;
+      gr = gEnd; gi++;
+    }
+  }
+
   for (var i = 0; i < n; i += 4) {
     r = data[i]; g = data[i+1]; b = data[i+2];
     lu = (r*77 + g*150 + b*29) >> 8;
@@ -542,7 +561,7 @@ function applyLook(data, width) {
         break;
       case 5: // Glitch — blocky channel corruption on source colors (no remapping)
         row = Math.floor(i / 4 / width);
-        blockRow = Math.floor(row / 14);
+        blockRow = glitchRowBlock ? glitchRowBlock[row] : Math.floor(row / 14);
         var gType = (blockRow * 3 + (blockRow >> 2)) % 7;
         if      (gType === 0) { data[i]=r; data[i+1]=g; data[i+2]=b; }                        // passthrough
         else if (gType === 1) { data[i]=g; data[i+1]=r; data[i+2]=b; }                        // RG swap
@@ -584,6 +603,16 @@ function applyLook(data, width) {
 
 /* ── Pixel sort algorithm ────────────────────────── */
 function lumaOf(r, g, b) { return (r * 77 + g * 150 + b * 29) >> 8; }
+
+// Deterministic float 0–1 from (row, span, chunk) + current frame seed.
+// Changes with _frameSeed (~10x/sec) so randomize blocks animate without flickering.
+function absRandFor(rowIdx, spanIdx, chunkIdx) {
+  var h = (_frameSeed ^ (rowIdx * 2654435761)) >>> 0;
+  h = (h ^ (spanIdx  * 1664525))    >>> 0;
+  h = (h ^ (chunkIdx * 1013904223)) >>> 0;
+  h ^= h >>> 16; h = (h * 0x45d9f3b) >>> 0; h ^= h >>> 16;
+  return h / 4294967296;
+}
 
 function sortRow(data, rowStart, rowLen, lo, hi, offPct, outside, rowIdx) {
   // Always scan full row — offset is applied as a cyclic shift within each span
@@ -739,6 +768,9 @@ function processFrame(source) {
 
   var imgData = offCtxA.getImageData(0, 0, rw, rh);
   var data    = imgData.data;
+
+  // Advance frame seed ~10× per second so randomize blocks drift slowly
+  _frameSeed = ((performance.now() / 100) | 0) * 2654435761 >>> 0;
 
   for (var row = 0; row < rh; row++) {
     sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside, row);
