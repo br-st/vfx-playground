@@ -234,6 +234,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
           <button class="seg-btn" data-angmode="2">Diag ↗</button>
           <button class="seg-btn" data-angmode="3">Diag ↘</button>
         </div>
+        <div class="divider"></div>
+        <div class="sec">Resolution</div>
+        <div class="row">
+          <span class="lbl">Pixel Size</span>
+          <input type="range" id="sl-res-sim" min="5" max="100" value="50" step="1">
+          <span class="val" id="vl-res-sim">50%</span>
+        </div>
       </div>
 
       <!-- Advanced controls -->
@@ -272,6 +279,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
           <input type="range" id="sl-res" min="5" max="100" value="50" step="1">
           <span class="val" id="vl-res">50%</span>
         </div>
+      </div>
+
+      <!-- Always-visible Randomize section -->
+      <div class="divider"></div>
+      <div class="sec">Randomize</div>
+      <div class="row">
+        <span class="lbl">Amount</span>
+        <input type="range" id="sl-rand" min="0" max="100" value="0" step="1">
+        <span class="val" id="vl-rand">0</span>
       </div>
 
     </div>
@@ -366,6 +382,7 @@ var sortOut   = false;
 var angleDeg  = 0;
 var offsetPct = 0;
 var resolution = 50;  // 5-100 %
+var randAmount = 0;   // 0-100 (0=uniform, 100=max block/source variance)
 
 /* ── Animation params ────────────────────────────── */
 var animOffEn       = false;
@@ -407,6 +424,18 @@ window.addEventListener('resize', resize);
 /* ── Scratch buffers ─────────────────────────────── */
 var MAX_LEN = 8192;
 var pixBuf  = new Uint8Array(MAX_LEN * 4);
+
+/* ── Deterministic hash ──────────────────────────── */
+function hash01(seed) {
+  seed = (((seed >>> 16) ^ seed) * 0x45d9f3b) | 0;
+  seed = (((seed >>> 16) ^ seed) * 0x45d9f3b) | 0;
+  return ((seed >>> 16) ^ seed) >>> 0 / 4294967296;
+}
+// Returns float in [0,1) — stable per (row, span, chunk) triple so it doesn't flicker
+function randFor(rowIdx, spanIdx, chunkIdx) {
+  return (Math.sin(rowIdx * 127.1 + spanIdx * 311.7 + chunkIdx * 74.3) * 43758.5453) % 1;
+}
+function absRandFor(a, b, c) { return Math.abs(randFor(a, b, c)); }
 
 /* ── Color helpers ───────────────────────────────── */
 function hue2rgb(p, q, t) {
@@ -556,9 +585,9 @@ function applyLook(data, width) {
 /* ── Pixel sort algorithm ────────────────────────── */
 function lumaOf(r, g, b) { return (r * 77 + g * 150 + b * 29) >> 8; }
 
-function sortRow(data, rowStart, rowLen, lo, hi, offPct, outside) {
+function sortRow(data, rowStart, rowLen, lo, hi, offPct, outside, rowIdx) {
   // Always scan full row — offset is applied as a cyclic shift within each span
-  var i = 0;
+  var i = 0, spanCount = 0;
   while (i < rowLen) {
     var p  = rowStart + i * 4;
     var br = lumaOf(data[p], data[p+1], data[p+2]);
@@ -575,18 +604,53 @@ function sortRow(data, rowStart, rowLen, lo, hi, offPct, outside) {
       i++;
     }
     var spanLen = i - spanStart;
-    if (spanLen < 2) continue;
-    sortSpan(data, rowStart + spanStart * 4, spanLen, offPct);
+    if (spanLen < 2) { spanCount++; continue; }
+
+    if (randAmount <= 0) {
+      // No randomize: sort the whole span by luma (original behaviour)
+      sortSpan(data, rowStart + spanStart * 4, spanLen, offPct, 0);
+    } else {
+      // Sub-divide span into variable-size chunks with randomized sort sources
+      var t = randAmount / 100;
+      // Available sort sources: 0=luma, 1=R, 2=G, 3=B, 4=saturation
+      // numSrcs scales: 1 at t=0 → 5 at t=1
+      var numSrcs = Math.max(1, Math.round(t * 5));
+      var pos = 0, chunkIdx = 0;
+      while (pos < spanLen) {
+        var r1 = absRandFor(rowIdx, spanCount, chunkIdx);
+        var r2 = absRandFor(rowIdx, spanCount, chunkIdx + 500);
+        // Chunk length: at t=0 → full remaining span; at t=1 → 1px to full span
+        // Mix: at low rand mostly keep full span, at high rand allow tiny chunks
+        var minLen = Math.max(1, Math.round(spanLen * (1 - t)));
+        var maxLen = spanLen - pos;
+        var chunkLen = Math.round(minLen + r1 * (maxLen - minLen));
+        chunkLen = Math.max(1, Math.min(chunkLen, spanLen - pos));
+        // Sort source chosen from available pool
+        var srcIdx = Math.floor(r2 * numSrcs);
+        sortSpan(data, rowStart + (spanStart + pos) * 4, chunkLen, offPct, srcIdx);
+        pos += chunkLen;
+        chunkIdx++;
+      }
+    }
+    spanCount++;
   }
 }
 
-function sortSpan(data, base, len, offPct) {
+function sortSpan(data, base, len, offPct, sortSrc) {
   if (len > MAX_LEN) len = MAX_LEN;
   var pairs = new Array(len);
   for (var j = 0; j < len; j++) {
     var s = base + j * 4;
     pixBuf[j*4]=data[s]; pixBuf[j*4+1]=data[s+1]; pixBuf[j*4+2]=data[s+2]; pixBuf[j*4+3]=data[s+3];
-    pairs[j] = [lumaOf(data[s], data[s+1], data[s+2]), j];
+    var r = data[s], g = data[s+1], b = data[s+2], key;
+    switch (sortSrc) {
+      case 1: key = r; break;
+      case 2: key = g; break;
+      case 3: key = b; break;
+      case 4: key = Math.max(r, g, b) - Math.min(r, g, b); break;  // saturation (chroma)
+      default: key = lumaOf(r, g, b); break;
+    }
+    pairs[j] = [key, j];
   }
   pairs.sort(function (a, b) { return a[0] - b[0]; });
   // Cyclic shift: rotate the sorted order within the span so pixels scroll in-place
@@ -677,7 +741,7 @@ function processFrame(source) {
   var data    = imgData.data;
 
   for (var row = 0; row < rh; row++) {
-    sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside);
+    sortRow(data, row * rw * 4, rw, _lo, _hi, _off, _outside, row);
   }
   applyLook(data, rw);
 
@@ -809,7 +873,17 @@ bs('sl-lo',  'vl-lo',  function (v, vl) { loThresh  = v; vl.textContent = Math.r
 bs('sl-hi',  'vl-hi',  function (v, vl) { hiThresh  = v; vl.textContent = Math.round(v); });
 bs('sl-ang', 'vl-ang', function (v, vl) { angleDeg  = v; vl.textContent = Math.round(v) + '°'; });
 bs('sl-off', 'vl-off', function (v, vl) { offsetPct = v; vl.textContent = Math.round(v); });
-bs('sl-res', 'vl-res', function (v, vl) { resolution = v; vl.textContent = Math.round(v) + '%'; });
+bs('sl-res', 'vl-res', function (v, vl) {
+  resolution = v; vl.textContent = Math.round(v) + '%';
+  document.getElementById('sl-res-sim').value = v;
+  document.getElementById('vl-res-sim').textContent = Math.round(v) + '%';
+});
+bs('sl-res-sim', 'vl-res-sim', function (v, vl) {
+  resolution = v; vl.textContent = Math.round(v) + '%';
+  document.getElementById('sl-res').value = v;
+  document.getElementById('vl-res').textContent = Math.round(v) + '%';
+});
+bs('sl-rand', 'vl-rand', function (v, vl) { randAmount = v; vl.textContent = Math.round(v); });
 
 document.getElementById('outside-track').addEventListener('click', function () {
   this.classList.toggle('on'); sortOut = this.classList.contains('on');
