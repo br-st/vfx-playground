@@ -526,7 +526,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
+<script src="/vfx/onnx/ort.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -546,8 +546,8 @@ var buildCfg = { density: 180, depthZ: 2.5, contrast: 1.5, spread: 1.0 };
 var mlMap = null, mlW = 0, mlH = 0;
 var smartMap = null, smartW = 0, smartH = 0;
 var ortSession = null, ortLoading = false, ortFailed = false;
-var ONNX_MODEL = 'https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx';
-var ONNX_WASM  = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+var ONNX_MODEL = '/vfx/onnx/depth-anything.onnx';
+var ONNX_WASM  = '/vfx/onnx/';
 var maskOn = false, maskCoverage = 0.5, maskSoft = 0.3, maskScale = 30, maskEvolve = 0;
 var maskNoiseType = 'fbm';
 var maskRAF = null;
@@ -672,25 +672,28 @@ function rebuildMaterial() {
 // ── Minimal ZIP builder (no external deps) ────────────
 // Builds a ZIP archive from an array of {name, data (Uint8Array)} entries.
 // Uses STORED (no compression) for simplicity and speed.
+// Returns an array of Uint8Array parts — pass straight to new Blob(parts)
+// so the whole archive is never copied into one giant buffer (saves memory on iPhone).
 function buildZip(entries) {
   var centralDir = [], offset = 0, parts = [];
   for (var i = 0; i < entries.length; i++) {
-    var name = entries[i].name;
     var data = entries[i].data;
-    var nameBytes = strToBytes(name);
-    var header = localFileHeader(nameBytes, data);
-    centralDir.push({nameBytes:nameBytes, data:data, offset:offset, headerLen:header.length});
+    var nameBytes = strToBytes(entries[i].name);
+    var crc = (entries[i].crc !== undefined) ? entries[i].crc : crc32(data);
+    var header = localFileHeader(nameBytes, data, crc);
+    centralDir.push({nameBytes:nameBytes, data:data, offset:offset, crc:crc});
     parts.push(header);
     parts.push(data);
     offset += header.length + data.length;
   }
-  var cdStart = offset;
+  var cdStart = offset, cdSize = 0;
   for (var i = 0; i < centralDir.length; i++) {
-    parts.push(centralDirEntry(centralDir[i]));
+    var cde = centralDirEntry(centralDir[i]);
+    parts.push(cde);
+    cdSize += cde.length;
   }
-  var cdEnd = offset + centralDir.reduce(function(s,e){return s+46+e.nameBytes.length;},0);
-  parts.push(endOfCentralDir(centralDir.length, cdEnd - cdStart, cdStart));
-  return mergeUint8(parts);
+  parts.push(endOfCentralDir(centralDir.length, cdSize, cdStart));
+  return parts;
 }
 function strToBytes(s) {
   var b = new Uint8Array(s.length);
@@ -699,19 +702,21 @@ function strToBytes(s) {
 }
 function u16(v) { return [v & 0xff, (v>>8) & 0xff]; }
 function u32(v) { return [v & 0xff, (v>>8)&0xff, (v>>16)&0xff, (v>>24)&0xff]; }
+var _crcTable = null;
 function crc32(data) {
-  var t = new Uint32Array(256);
-  for (var i = 0; i < 256; i++) {
-    var c = i;
-    for (var j = 0; j < 8; j++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
-    t[i] = c;
+  if (!_crcTable) {
+    _crcTable = new Uint32Array(256);
+    for (var i = 0; i < 256; i++) {
+      var c = i;
+      for (var j = 0; j < 8; j++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+      _crcTable[i] = c;
+    }
   }
-  var crc = 0xFFFFFFFF;
+  var t = _crcTable, crc = 0xFFFFFFFF;
   for (var i = 0; i < data.length; i++) crc = t[(crc^data[i])&0xff] ^ (crc>>>8);
   return (crc^0xFFFFFFFF) >>> 0;
 }
-function localFileHeader(nameBytes, data) {
-  var crc = crc32(data);
+function localFileHeader(nameBytes, data, crc) {
   var arr = [0x50,0x4B,0x03,0x04,20,0,0,0,0,0,0,0,0,0]
     .concat(u32(crc)).concat(u32(data.length)).concat(u32(data.length))
     .concat(u16(nameBytes.length)).concat([0,0]);
@@ -720,7 +725,7 @@ function localFileHeader(nameBytes, data) {
   return b;
 }
 function centralDirEntry(e) {
-  var crc = crc32(e.data);
+  var crc = e.crc;
   var arr = [0x50,0x4B,0x01,0x02,20,0,20,0,0,0,0,0,0,0,0,0]
     .concat(u32(crc)).concat(u32(e.data.length)).concat(u32(e.data.length))
     .concat(u16(e.nameBytes.length)).concat([0,0,0,0,0,0,0,0,0,0,0,0])
@@ -744,33 +749,78 @@ function mergeUint8(arrays) {
 }
 
 // ── Frame capture ─────────────────────────────────────
-function captureCurrentFrame(callback) {
-  // Hide all UI, render one clean frame, then restore
-  var topBar    = document.getElementById('top-bar');
-  var sheetWrap = document.getElementById('sheet-wrap');
-  var tbVis = topBar.style.display;
-  var swVis = sheetWrap.style.display;
-  topBar.style.display    = 'none';
-  sheetWrap.style.display = 'none';
+// The WebGL canvas only contains the 3D render — DOM UI is never part of it,
+// so no UI hiding is needed. Frames are rendered and encoded one at a time,
+// strictly in order: frame N+1 is never rendered until frame N is fully saved.
 
-  // Force a clean render with UI hidden
-  if (bgScene && bgMat) {
-    bgMat.uniforms.uTime.value = clock.getElapsedTime();
-    renderer.autoClear = false;
-    renderer.clear();
-    renderer.render(bgScene, bgCam);
-    renderer.render(scene, camera);
-    renderer.autoClear = true;
-  } else {
-    renderer.render(scene, camera);
-  }
+var CAPTURE_FPS = 30;      // fixed timestep for sequences (frames are evenly spaced in time)
+var captureClock = null;   // when non-null, overrides the wall clock for animation time
+var captureBusy  = false;  // pauses the live render loop while capturing
+var captureCancel = false;
 
+function nowTime() {
+  return captureClock !== null ? captureClock : clock.getElapsedTime();
+}
+
+// Encode the canvas as PNG bytes. Called synchronously right after a render,
+// so the drawing buffer is still intact. Falls back to toDataURL if toBlob
+// fails (old Safari / low-memory iPhone can return null).
+function encodeCanvasPNG() {
   var canvas = document.getElementById('three-canvas');
-  canvas.toBlob(function(blob) {
-    topBar.style.display    = tbVis;
-    sheetWrap.style.display = swVis;
-    callback(blob);
-  }, 'image/png');
+  return new Promise(function(resolve, reject) {
+    function fromDataURL() {
+      try {
+        var url = canvas.toDataURL('image/png');
+        var bin = atob(url.split(',')[1]);
+        var out = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        resolve(out);
+      } catch (e) { reject(e); }
+    }
+    if (!canvas.toBlob) { fromDataURL(); return; }
+    canvas.toBlob(function(blob) {
+      if (!blob) { fromDataURL(); return; }
+      blobToBytes(blob).then(resolve, function() { fromDataURL(); });
+    }, 'image/png');
+  });
+}
+
+// FileReader works on every Safari version; blob.arrayBuffer() does not.
+function blobToBytes(blob) {
+  return new Promise(function(resolve, reject) {
+    var fr = new FileReader();
+    fr.onload  = function() { resolve(new Uint8Array(fr.result)); };
+    fr.onerror = function() { reject(fr.error); };
+    fr.readAsArrayBuffer(blob);
+  });
+}
+
+// Wait one browser frame so the progress UI can repaint between captures.
+function nextFrame() {
+  return new Promise(function(r) { requestAnimationFrame(function() { r(); }); });
+}
+
+// Render one frame at a given animation time and return its PNG bytes.
+// Retries once if encoding fails.
+function renderAndEncode(timeSec) {
+  captureClock = timeSec;
+  stepScene();
+  return encodeCanvasPNG().catch(function() {
+    stepScene(); // re-render (buffer may have been cleared) and retry once
+    return encodeCanvasPNG();
+  });
+}
+
+function captureCurrentFrame(callback) {
+  captureBusy = true;
+  renderAndEncode(clock.getElapsedTime()).then(function(bytes) {
+    captureClock = null; captureBusy = false;
+    callback(new Blob([bytes], { type: 'image/png' }));
+  }, function(err) {
+    captureClock = null; captureBusy = false;
+    console.error('[Capture] single frame failed:', err);
+    alert('Could not export the frame. Please try again.');
+  });
 }
 
 function downloadBlob(blob, filename) {
@@ -802,42 +852,59 @@ function openCaptureModal() {
   document.getElementById('cap-go').textContent          = '\u2913 Export';
   document.getElementById('cap-go').style.pointerEvents  = '';
   document.getElementById('cap-go').style.opacity        = '1';
+  document.getElementById('cap-cancel').textContent      = 'Cancel';
   document.getElementById('capture-modal').style.display = 'flex';
 }
 
 function closeCaptureModal() {
-  captureActive = false;
+  // If a sequence is running, request cancel — the loop cleans up itself
+  if (captureActive) { captureCancel = true; return; }
   document.getElementById('capture-modal').style.display = 'none';
 }
 
-// Called from render loop every frame when sequence capture is running
-function tickCapture() {
-  if (!captureActive) return;
-  var total = captureTotal, frame = captureFrame;
+// Strictly sequential sequence capture with a fixed timestep.
+// Every frame is rendered, encoded and stored before the next one starts,
+// so no frame can be skipped, duplicated or overwritten.
+async function runSequenceCapture(total) {
   var label = document.getElementById('cap-progress-label');
   var bar   = document.getElementById('cap-progress-bar');
-  label.textContent = 'CAPTURING ' + (frame+1) + ' / ' + total;
-  bar.style.width   = Math.round((frame / total) * 100) + '%';
+  var dt    = 1 / CAPTURE_FPS;
+  var start = clock.getElapsedTime();
+  var frames = [];
+  var f = 0;
 
-  captureCurrentFrame(function(blob) {
-    blob.arrayBuffer().then(function(ab) {
-      captureBlobs.push({ name: 'frame_' + pad(frame, 4) + '.png', data: new Uint8Array(ab) });
-      captureFrame++;
-      if (captureFrame >= captureTotal) {
-        // Done — build zip and download
-        captureActive = false;
-        bar.style.width = '100%';
-        label.textContent = 'BUILDING ZIP\u2026';
-        setTimeout(function() {
-          var zip     = buildZip(captureBlobs);
-          var zipBlob = new Blob([zip], { type: 'application/zip' });
-          downloadBlob(zipBlob, 'depthcloud_sequence.zip');
-          closeCaptureModal();
-        }, 100);
-      }
-    });
-  });
+  captureActive = true; captureCancel = false; captureBusy = true;
+  try {
+    for (f = 0; f < total; f++) {
+      if (captureCancel) break;
+      label.textContent = 'CAPTURING ' + (f + 1) + ' / ' + total;
+      bar.style.width   = Math.round((f / total) * 100) + '%';
+
+      var bytes = await renderAndEncode(start + f * dt);
+      frames.push({ name: 'frame_' + pad(f, 4) + '.png', data: bytes, crc: crc32(bytes) });
+
+      await nextFrame(); // let the progress UI repaint
+    }
+
+    if (!captureCancel && frames.length === total) {
+      bar.style.width = '100%';
+      label.textContent = 'BUILDING ZIP…';
+      await nextFrame();
+      var zipBlob = new Blob(buildZip(frames), { type: 'application/zip' });
+      frames = null; // release frame memory before download
+      downloadBlob(zipBlob, 'depthcloud_sequence.zip');
+    }
+  } catch (err) {
+    console.error('[Capture] sequence failed at frame', f, err);
+    alert('Export stopped at frame ' + (f + 1) + ' of ' + total +
+      '. The device may be low on memory — try fewer frames.');
+  } finally {
+    captureClock = null; captureBusy = false;
+    captureActive = false; captureCancel = false;
+    document.getElementById('capture-modal').style.display = 'none';
+  }
 }
+
 
 function pad(n, w) { var s = String(n); while (s.length < w) s = '0' + s; return s; }
 
@@ -1124,7 +1191,16 @@ var ANIMS = {
 
 function renderLoop() {
   requestAnimationFrame(renderLoop);
-  var t = clock.getElapsedTime() * animSpeed;
+  // While exporting, the capture routine drives stepScene() itself,
+  // one frame at a time — the live loop must not render in between.
+  if (captureBusy) return;
+  stepScene();
+}
+
+// Advances animation/camera by one step and renders. Time comes from nowTime(),
+// which the exporter overrides with a fixed timestep.
+function stepScene() {
+  var t = nowTime() * animSpeed;
   if (demoCloud) { demoCloud.rotation.y=t*.05; demoCloud.rotation.x=Math.sin(t*.03)*.2; }
   if (cloudPoints && animEnabled && currentAnim !== 'none' && origPos) {
     var fn = ANIMS[currentAnim];
@@ -1189,7 +1265,7 @@ function renderLoop() {
   if (Math.abs(currentFov - camera.fov) > 0.05) { camera.fov=currentFov; camera.updateProjectionMatrix(); }
   // Render background quad first, then main scene on top
   if (bgScene && bgMat) {
-    bgMat.uniforms.uTime.value = clock.getElapsedTime();
+    bgMat.uniforms.uTime.value = nowTime();
     renderer.autoClear = false;
     renderer.clear();
     renderer.render(bgScene, bgCam);
@@ -1198,9 +1274,6 @@ function renderLoop() {
   } else {
     renderer.render(scene, camera);
   }
-
-  // Sequence capture — grab this frame if active
-  if (captureActive) tickCapture();
 }
 
 
@@ -1744,13 +1817,13 @@ document.getElementById('cap-go').addEventListener('click', function() {
   } else {
     // Start sequence
     captureTotal  = parseInt(document.getElementById('cap-frames').value);
-    captureFrame  = 0;
-    captureBlobs  = [];
-    captureActive = true;
+    if (captureActive) return; // guard against double-taps
     document.getElementById('cap-progress').style.display = 'block';
     document.getElementById('cap-go').textContent         = 'Capturing\u2026';
     document.getElementById('cap-go').style.opacity       = '0.5';
     document.getElementById('cap-go').style.pointerEvents = 'none';
+    document.getElementById('cap-cancel').textContent     = 'Stop';
+    runSequenceCapture(captureTotal);
   }
 });
 })();
