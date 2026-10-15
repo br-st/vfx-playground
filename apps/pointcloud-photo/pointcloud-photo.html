@@ -288,6 +288,27 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;
   </div>
 </div>
 
+<!-- DEPTH MODEL WARNING BANNER -->
+<div id="depth-banner" role="alert" style="display:none;position:fixed;left:12px;right:12px;
+  top:calc(64px + var(--safe-t));z-index:20;max-width:520px;margin:0 auto;
+  align-items:flex-start;gap:10px;padding:12px 12px 12px 14px;border-radius:12px;
+  background:rgba(40,14,18,.94);border:1px solid rgba(255,107,107,.45);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 8px 30px rgba(0,0,0,.45);">
+  <span style="font-size:15px;line-height:1.3;flex-shrink:0;">&#x26A0;&#xFE0F;</span>
+  <div style="flex:1;min-width:0;">
+    <div id="depth-banner-title" style="font-size:13px;font-weight:600;color:#FFD6D6;line-height:1.4;"></div>
+    <div id="depth-banner-detail" style="font-family:var(--mono);font-size:10px;color:rgba(255,190,190,.75);
+      line-height:1.5;margin-top:4px;word-break:break-word;"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button id="depth-banner-retry" style="padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;
+        background:rgba(255,107,107,.18);border:1px solid rgba(255,107,107,.5);color:var(--coral);">&#x21BA; Retry</button>
+      <button id="depth-banner-close" style="padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;
+        background:none;border:1px solid var(--border);color:var(--dim);">Dismiss</button>
+    </div>
+  </div>
+</div>
+
 <div id="sheet-wrap">
   <div class="drag-handle-row" id="drag-handle"><div class="drag-pill"></div></div>
   <div id="tab-bar">
@@ -526,7 +547,6 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;
   </div>
 </div>
 
-<script src="/vfx/onnx/ort.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function() {
@@ -546,8 +566,21 @@ var buildCfg = { density: 180, depthZ: 2.5, contrast: 1.5, spread: 1.0 };
 var mlMap = null, mlW = 0, mlH = 0;
 var smartMap = null, smartW = 0, smartH = 0;
 var ortSession = null, ortLoading = false, ortFailed = false;
-var ONNX_MODEL = '/vfx/onnx/depth-anything.onnx';
-var ONNX_WASM  = '/vfx/onnx/';
+// Depth engine + model sources, tried in order. The self-hosted copy is used on
+// app.br-st.com; anywhere else (e.g. GitHub Pages) those paths 404 and the
+// public CDNs are used instead. Runtime JS and its .wasm files must stay paired
+// (same version, same folder).
+var ORT_SOURCES = [
+  { js: '/vfx/onnx/ort.min.js', wasm: '/vfx/onnx/' },
+  { js: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js',
+    wasm: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/' }
+];
+var MODEL_SOURCES = [
+  '/vfx/onnx/depth-anything.onnx',
+  'https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model.onnx'
+];
+var ONNX_MODEL = MODEL_SOURCES[0]; // the source actually used (set once loaded)
+var ONNX_WASM  = ORT_SOURCES[0].wasm;
 var maskOn = false, maskCoverage = 0.5, maskSoft = 0.3, maskScale = 30, maskEvolve = 0;
 var maskNoiseType = 'fbm';
 var maskRAF = null;
@@ -1310,21 +1343,152 @@ function runSmartDepth(img) {
   return {data:computeSmartDepth(imd,W,H),w:W,h:H};
 }
 
+// ── Depth model error reporting ───────────────────────
+var depthError = null; // {title, detail} of the last neural-depth failure, or null
+var modelProgressCb = null; // set by loadImage to show download progress
+
+function errText(e) { return String((e && (e.message || e)) || 'Unknown error'); }
+
+// Turn a raw error into a plain-language reason the banner can show.
+function classifyDepthError(stage, e, httpStatus) {
+  var msg = errText(e), low = msg.toLowerCase();
+  if (stage === 'runtime')
+    return { title: 'The depth engine (ONNX Runtime) could not be loaded.', detail: 'Tried: ' + ORT_SOURCES.map(function(s){return s.js;}).join(' , ') };
+  if (stage === 'fetch' && httpStatus)
+    return { title: 'The depth model file could not be downloaded (HTTP ' + httpStatus + ').', detail: 'Tried: ' + MODEL_SOURCES.join(' , ') };
+  if (stage === 'fetch')
+    return { title: 'The depth model download was interrupted.', detail: 'Check your connection and tap Retry. (' + msg + ')' };
+  if (low.indexOf('memory') >= 0 || low.indexOf('allocation') >= 0 || low.indexOf('rangeerror') >= 0 || low.indexOf('bad_alloc') >= 0)
+    return { title: 'This device ran out of memory loading the depth model.', detail: 'Close other tabs and apps, then tap Retry. (' + msg + ')' };
+  if (msg.indexOf('ConvInteger') >= 0 || msg.indexOf('Could not find an implementation') >= 0)
+    return { title: 'The depth model file is a quantized version this browser cannot run.', detail: 'Replace it with the fp32 model.onnx. (' + msg.slice(0, 160) + ')' };
+  if (stage === 'inference')
+    return { title: 'The depth model failed while processing this photo.', detail: msg.slice(0, 200) };
+  return { title: 'The neural depth model failed to load.', detail: msg.slice(0, 200) };
+}
+
+function showDepthBanner() {
+  var b = document.getElementById('depth-banner');
+  if (!b || !depthError) return;
+  document.getElementById('depth-banner-title').textContent  = depthError.title + ' Using Smart depth instead.';
+  document.getElementById('depth-banner-detail').textContent = depthError.detail || '';
+  b.style.display = 'flex';
+}
+function hideDepthBanner() {
+  var b = document.getElementById('depth-banner');
+  if (b) b.style.display = 'none';
+}
+
+// Download the model with progress, writing straight into one pre-sized buffer
+// (avoids holding two 99 MB copies at once on low-memory phones).
+// Load a <script> on demand; resolves true on success, false on failure (e.g. 404).
+function loadScript(src) {
+  return new Promise(function(resolve) {
+    var s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload  = function() { resolve(true); };
+    s.onerror = function() { s.remove(); resolve(false); };
+    document.head.appendChild(s);
+  });
+}
+
+// Make sure the ONNX Runtime is loaded, trying each source in turn.
+async function ensureOrt() {
+  if (typeof ort !== 'undefined') return true;
+  for (var i = 0; i < ORT_SOURCES.length; i++) {
+    var ok = await loadScript(ORT_SOURCES[i].js);
+    if (ok && typeof ort !== 'undefined') {
+      ONNX_WASM = ORT_SOURCES[i].wasm;
+      console.log('[DA] Runtime from', ORT_SOURCES[i].js);
+      return true;
+    }
+    console.warn('[DA] Runtime not available at', ORT_SOURCES[i].js);
+  }
+  return false;
+}
+
+// Try each model source until one downloads.
+async function fetchModelBytes() {
+  var lastErr = null;
+  for (var i = 0; i < MODEL_SOURCES.length; i++) {
+    try {
+      console.log('[DA] Downloading', MODEL_SOURCES[i]);
+      var bytes = await fetchModelFrom(MODEL_SOURCES[i]);
+      ONNX_MODEL = MODEL_SOURCES[i];
+      return bytes;
+    } catch (e) {
+      console.warn('[DA] Model not available at', MODEL_SOURCES[i], '-', errText(e));
+      lastErr = e;
+    }
+  }
+  throw lastErr;
+}
+
+async function fetchModelFrom(url) {
+  var res;
+  try { res = await fetch(url); }
+  catch (e) { var err = new Error(errText(e)); err.stage = 'fetch'; throw err; }
+  if (!res.ok) { var e2 = new Error('HTTP ' + res.status); e2.stage = 'fetch'; e2.httpStatus = res.status; throw e2; }
+  var total = parseInt(res.headers.get('content-length') || '0', 10);
+  if (!res.body || !res.body.getReader || !total) {
+    try { return new Uint8Array(await res.arrayBuffer()); }
+    catch (e3) { var e4 = new Error(errText(e3)); e4.stage = 'fetch'; throw e4; }
+  }
+  var buf = new Uint8Array(total), got = 0, reader = res.body.getReader();
+  try {
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      if (got + chunk.value.length > total) { // server sent more than advertised — grow
+        var bigger = new Uint8Array(got + chunk.value.length); bigger.set(buf.subarray(0, got)); buf = bigger;
+      }
+      buf.set(chunk.value, got); got += chunk.value.length;
+      if (modelProgressCb) modelProgressCb(got, total);
+    }
+  } catch (e5) { var e6 = new Error(errText(e5)); e6.stage = 'fetch'; throw e6; }
+  if (got < total) { var e7 = new Error('Download incomplete: ' + got + ' of ' + total + ' bytes'); e7.stage = 'fetch'; throw e7; }
+  return got === buf.length ? buf : buf.subarray(0, got);
+}
+
 async function loadOrtSession() {
   if(ortSession) return ortSession;
   if(ortLoading){while(ortLoading)await new Promise(function(r){setTimeout(r,50);});return ortSession;}
   if(ortFailed) return null;
-  if(typeof ort==='undefined'){ortFailed=true;return null;}
   ortLoading=true;
+  if(!(await ensureOrt())){
+    depthError = classifyDepthError('runtime'); ortFailed = true; ortLoading = false;
+    console.error('[DA] ONNX Runtime could not be loaded from any source'); return null;
+  }
   try{
     ort.env.wasm.wasmPaths=ONNX_WASM;ort.env.wasm.numThreads=1;
-    ortSession=await ort.InferenceSession.create(ONNX_MODEL,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
+    var bytes = await fetchModelBytes();
+    console.log('[DA] Downloaded', bytes.length, 'bytes; creating session');
+    ortSession=await ort.InferenceSession.create(bytes,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
+    bytes = null; // let the downloaded copy be garbage-collected
+    depthError = null;
     console.log('[DA] Loaded. inputs:',ortSession.inputNames,'outputs:',ortSession.outputNames);
-  }catch(e){console.error('[DA] Load failed:',e);ortSession=null;ortFailed=true;}
+  }catch(e){
+    console.error('[DA] Load failed:',e);
+    depthError = classifyDepthError(e && e.stage ? e.stage : 'session', e, e && e.httpStatus);
+    ortSession=null; ortFailed=true;
+  }
   ortLoading=false;return ortSession;
 }
+
+// Clear a previous failure and try the neural model again on the current photo.
+function retryNeuralDepth() {
+  hideDepthBanner();
+  ortFailed = false; ortSession = null; depthError = null;
+  depthMode = 'neural';
+  document.querySelectorAll('.seg-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.mode === 'neural'); });
+  if (sourceImage) {
+    var neuralBtn = document.querySelector('.seg-btn[data-mode="neural"]');
+    if (neuralBtn) neuralBtn.click(); // reuses the existing load + rebuild path
+  }
+}
+
 async function runDepthAnything(img) {
-  var session=await loadOrtSession();if(!session)return null;
+  var session=await loadOrtSession();if(!session){showDepthBanner();return null;}
   try{
     var SIZE=518,cv2=document.createElement('canvas');
     cv2.width=cv2.height=SIZE;cv2.getContext('2d').drawImage(img,0,0,SIZE,SIZE);
@@ -1344,8 +1508,14 @@ async function runDepthAnything(img) {
     for(var j=0;j<raw.length;j++){if(raw[j]<mn)mn=raw[j];if(raw[j]>mx)mx=raw[j];}
     var range=mx-mn||1,norm=new Float32Array(raw.length);
     for(var k=0;k<raw.length;k++) norm[k]=(raw[k]-mn)/range;
+    hideDepthBanner();
     return{data:norm,w:SIZE,h:SIZE};
-  }catch(e){console.error('[DA] Inference error:',e);return null;}
+  }catch(e){
+    console.error('[DA] Inference error:',e);
+    depthError = classifyDepthError('inference', e);
+    showDepthBanner();
+    return null;
+  }
 }
 
 function pixelDepth(imd,w,h,mode,contrast,spread) {
@@ -1572,11 +1742,16 @@ async function loadImage(src){
   pb.style.width='15%';mlMap=null;mlW=mlH=0;
   if(depthMode==='neural'){
     lbl.textContent=ortSession?'RUNNING DEPTH MODEL\u2026':'LOADING DEPTH MODEL (~97 MB, first time only)\u2026';
-    pb.style.width='28%';
+    pb.style.width='20%';
+    modelProgressCb=function(got,total){
+      lbl.textContent='DOWNLOADING DEPTH MODEL '+(got/1048576).toFixed(0)+' / '+(total/1048576).toFixed(0)+' MB';
+      pb.style.width=(20+Math.round(got/total*45))+'%';
+    };
     await new Promise(function(r){setTimeout(r,0);});
     var r=await runDepthAnything(img);
+    modelProgressCb=null;
     if(r){mlMap=r.data;mlW=r.w;mlH=r.h;lbl.textContent='NEURAL DEPTH READY \u2736';}
-    else{lbl.textContent='COMPUTING FALLBACK DEPTH\u2026';pb.style.width='40%';await new Promise(function(r){setTimeout(r,0);});var fb=runSmartDepth(img);mlMap=fb.data;mlW=fb.w;mlH=fb.h;lbl.textContent='DEPTH READY \u2736';}
+    else{lbl.textContent='NEURAL DEPTH UNAVAILABLE \u2014 USING SMART DEPTH\u2026';pb.style.width='40%';await new Promise(function(r){setTimeout(r,0);});var fb=runSmartDepth(img);mlMap=fb.data;mlW=fb.w;mlH=fb.h;}
     pb.style.width='74%';
   }else if(depthMode==='smart'){
     lbl.textContent='COMPUTING DEPTH MAP\u2026';pb.style.width='35%';
@@ -1627,7 +1802,7 @@ function fullReset(){
   document.getElementById('sl-bg-intensity').value=0;document.getElementById('val-bg-intensity').textContent='0';
   document.getElementById('sl-bg-grad-intensity').value=40;document.getElementById('val-bg-grad-intensity').textContent='40';
   document.getElementById('sl-bg-speed').value=30;document.getElementById('val-bg-speed').textContent='30';
-  spriteType='square';depthMode='neural';ortFailed=false;
+  spriteType='square';depthMode='neural';ortFailed=false;depthError=null;hideDepthBanner();
   maskNoiseType='fbm';manualRotY=0;targetFov=60;rotStrength=1.0;currentFov=60;camera.fov=60;camera.updateProjectionMatrix();
   camTarget={x:0,y:0,z:4};camCurrent={x:0,y:0,z:4};
   document.querySelectorAll('.seg-btn').forEach(function(b){b.classList.remove('active');});
@@ -1785,6 +1960,9 @@ document.getElementById('bg-grad-a').addEventListener('input',function(e){bgGrad
 document.getElementById('bg-grad-b').addEventListener('input',function(e){bgGradB=hexToRgb(e.target.value);updateBackground();});
 document.getElementById('sl-bg-grad-intensity').addEventListener('input',function(e){bgGradIntensity=parseInt(e.target.value)/100;document.getElementById('val-bg-grad-intensity').textContent=e.target.value;updateBackground();});
 document.getElementById('sl-bg-speed').addEventListener('input',function(e){bgGradSpeed=parseInt(e.target.value)/100;document.getElementById('val-bg-speed').textContent=e.target.value;updateBackground();});
+
+document.getElementById('depth-banner-retry').addEventListener('click', retryNeuralDepth);
+document.getElementById('depth-banner-close').addEventListener('click', hideDepthBanner);
 
 initThree();initGyro();
 document.getElementById('capture-btn').addEventListener('click', openCaptureModal);
