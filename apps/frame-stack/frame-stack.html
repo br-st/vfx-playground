@@ -232,6 +232,18 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <div class="info" id="clip-info">—</div>
         <button class="abtn" id="btn-extract">&#8635; Extract frames</button>
       </div>
+      <div class="divider"></div>
+      <div class="sec">Crop</div>
+      <div class="row"><span class="lbl">Left</span>
+        <input type="range" id="sl-crl" min="0" max="45" value="0" step="0.5"><span class="val" id="vl-crl"></span></div>
+      <div class="row"><span class="lbl">Right</span>
+        <input type="range" id="sl-crr" min="0" max="45" value="0" step="0.5"><span class="val" id="vl-crr"></span></div>
+      <div class="row"><span class="lbl">Top</span>
+        <input type="range" id="sl-crt" min="0" max="45" value="0" step="0.5"><span class="val" id="vl-crt"></span></div>
+      <div class="row"><span class="lbl">Bottom</span>
+        <input type="range" id="sl-crb" min="0" max="45" value="0" step="0.5"><span class="val" id="vl-crb"></span></div>
+      <div class="info" id="crop-info">Live, non-destructive — no re-extract needed.</div>
+      <button class="abtn ghost" id="btn-crop-reset">Reset crop</button>
     </div>
 
     <!-- ── Layout ───────────────────────────────── -->
@@ -241,6 +253,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <button class="seg-btn active" data-v="0">Stack</button>
         <button class="seg-btn" data-v="1">Hinge</button>
         <button class="seg-btn" data-v="2">Ring</button>
+        <button class="seg-btn" data-v="3">Emit</button>
       </div>
       <div class="lay-blk" data-lay="0">
         <div class="row"><span class="lbl">Depth</span>
@@ -251,8 +264,6 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
           <input type="range" id="sl-dx" min="-60" max="60" value="0" step="1"><span class="val" id="vl-dx"></span></div>
         <div class="row"><span class="lbl">Drift Y</span>
           <input type="range" id="sl-dy" min="-60" max="60" value="0" step="1"><span class="val" id="vl-dy"></span></div>
-        <div class="row"><span class="lbl">End Scale</span>
-          <input type="range" id="sl-sce" min="10" max="300" value="100" step="1"><span class="val" id="vl-sce"></span></div>
       </div>
       <div class="lay-blk" data-lay="1" style="display:none">
         <div class="sec">Hinge Edge</div>
@@ -279,8 +290,40 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <div class="toggle-row"><span class="toggle-lbl">Face Inward</span>
           <div class="track" data-key="faceIn"><div class="thumb"></div></div></div>
       </div>
+      <div class="lay-blk" data-lay="3" style="display:none">
+        <div class="info" style="margin:0 0 14px;">The scan frame stays front &amp; centre; the rest stream out behind it. Uses the Scan tab's direction, speed and Step/Glide.</div>
+        <div class="sec">Source</div>
+        <div class="seg" data-key="emitSrc">
+          <button class="seg-btn active" data-v="0">Past</button>
+          <button class="seg-btn" data-v="1">Upcoming</button>
+          <button class="seg-btn" data-v="2">Both</button>
+        </div>
+        <div class="row"><span class="lbl">Distance</span>
+          <input type="range" id="sl-edi" min="5" max="200" value="60" step="1"><span class="val" id="vl-edi"></span></div>
+        <div class="row"><span class="lbl">Accel</span>
+          <input type="range" id="sl-eac" min="-100" max="100" value="0" step="1"><span class="val" id="vl-eac"></span></div>
+        <div class="row"><span class="lbl">Spread</span>
+          <input type="range" id="sl-esp" min="0" max="60" value="0" step="1"><span class="val" id="vl-esp"></span></div>
+        <div class="row"><span class="lbl">Spiral</span>
+          <input type="range" id="sl-esr" min="-4" max="4" value="1" step="0.25"><span class="val" id="vl-esr"></span></div>
+        <div class="row"><span class="lbl">Twist</span>
+          <input type="range" id="sl-etw" min="-360" max="360" value="0" step="1"><span class="val" id="vl-etw"></span></div>
+        <div class="row"><span class="lbl">Rise</span>
+          <input type="range" id="sl-eri" min="-60" max="60" value="0" step="1"><span class="val" id="vl-eri"></span></div>
+        <div class="row"><span class="lbl">Fade Out</span>
+          <input type="range" id="sl-efo" min="0" max="100" value="35" step="1"><span class="val" id="vl-efo"></span></div>
+      </div>
       <div class="toggle-row"><span class="toggle-lbl">Reverse Order</span>
         <div class="track" data-key="reverse"><div class="thumb"></div></div></div>
+      <div class="divider"></div>
+      <div class="sec">Size</div>
+      <div class="row"><span class="lbl">Global</span>
+        <input type="range" id="sl-gsc" min="10" max="300" value="100" step="1"><span class="val" id="vl-gsc"></span></div>
+      <div class="row"><span class="lbl">Start Scale</span>
+        <input type="range" id="sl-scs" min="10" max="300" value="100" step="1"><span class="val" id="vl-scs"></span></div>
+      <div class="row"><span class="lbl">End Scale</span>
+        <input type="range" id="sl-sce" min="10" max="300" value="100" step="1"><span class="val" id="vl-sce"></span></div>
+      <div class="info">Start → End ramps across the frame order (Emit: front → back).</div>
       <div class="divider"></div>
       <div class="sec">Presets</div>
       <div class="preset-grid">
@@ -292,6 +335,10 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <button class="pbtn" data-p="carousel">Carousel</button>
         <button class="pbtn" data-p="helix">Helix</button>
         <button class="pbtn" data-p="stair">Spiral Stair</button>
+        <button class="pbtn" data-p="stream">Emit Stream</button>
+        <button class="pbtn" data-p="vortex">Emit Vortex</button>
+        <button class="pbtn" data-p="bloom">Emit Bloom</button>
+        <button class="pbtn" data-p="echo">Emit Echo</button>
       </div>
     </div>
 
@@ -383,6 +430,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <input type="range" id="sl-hgl" min="0" max="100" value="20" step="1"><span class="val" id="vl-hgl"></span></div>
       <div class="row"><span class="lbl">Outline</span>
         <input type="range" id="sl-hol" min="0" max="100" value="70" step="1"><span class="val" id="vl-hol"></span></div>
+      <div class="row"><span class="lbl">Saturation</span>
+        <input type="range" id="sl-hsa" min="0" max="200" value="100" step="1"><span class="val" id="vl-hsa"></span></div>
+      <div class="info">Saturation of the lit frame only — the rest use Frames ▸ Saturation. Blends along the Glide curve.</div>
       <div class="color-row"><span class="lbl">Accent</span><input type="color" data-key="hiColor" value="#00f5ff"></div>
       <div class="toggle-row"><span class="toggle-lbl">Unmask Lit Frame</span>
         <div class="track on" data-key="hiBypass"><div class="thumb"></div></div></div>
@@ -400,6 +450,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <button class="seg-btn" data-v="3">Arc</button>
         <button class="seg-btn" data-v="4">Dolly</button>
         <button class="seg-btn" data-v="5">Drift</button>
+      </div>
+      <div class="sec">Subtle</div>
+      <div class="seg" data-key="camMode">
+        <button class="seg-btn" data-v="6">Float</button>
+        <button class="seg-btn" data-v="7">Breathe</button>
+        <button class="seg-btn" data-v="8">Handheld</button>
+      </div>
+      <div class="seg" data-key="camMode">
+        <button class="seg-btn" data-v="9">Tilt</button>
+        <button class="seg-btn" data-v="10">Truck</button>
+        <button class="seg-btn" data-v="11">Crane</button>
       </div>
       <div class="row"><span class="lbl">Amount</span>
         <input type="range" id="sl-cam" min="0" max="100" value="35" step="1"><span class="val" id="vl-cam"></span></div>
@@ -516,8 +577,11 @@ var MAX_DPR = Math.min(window.devicePixelRatio || 1, 2);
 var P = {
   // clip
   inSec: 0, outSec: 8, count: 32, quality: 1,
+  cropL: 0, cropR: 0, cropT: 0, cropB: 0,
   // layout
-  layout: 0, depth: 4, twist: 0, driftX: 0, driftY: 0, scaleEnd: 1,
+  layout: 0, depth: 4, twist: 0, driftX: 0, driftY: 0,
+  gScale: 1, scaleStart: 1, scaleEnd: 1,
+  emitSrc: 0, emitDist: 6, emitAccel: 0, emitSpread: 0, emitSpiral: 1, emitTwist: 0, emitRise: 0, emitFade: 0.35,
   edge: 0, sweep: 140, gap: 0, lift: 0,
   radius: 2.5, arc: 360, rise: 0, faceIn: false, reverse: false,
   // frames
@@ -527,7 +591,7 @@ var P = {
   // scan
   scanOn: true, scanStep: 1, scanDir: 0, scanCycles: 1, scanWidth: 0, scanTrail: false,
   glideCurve: 1, glideW: 3, glideShape: 0, glideHold: 0, glideBias: 0,
-  pop: 0.15, dim: 0.3, hiGlow: 0.2, hiOutline: 0.7, hiColor: '#00f5ff', hiBypass: true,
+  pop: 0.15, dim: 0.3, hiGlow: 0.2, hiOutline: 0.7, hiColor: '#00f5ff', hiBypass: true, hiSat: 1,
   // camera
   camMode: 2, camAmt: 0.35, camCycles: 1, fov: 35,
   // scene
@@ -551,7 +615,20 @@ var SLIDERS = [
   ['sl-twi', 'twist',      1,    fDeg, 'L'],
   ['sl-dx',  'driftX',     0.1,  fOne, 'L'],
   ['sl-dy',  'driftY',     0.1,  fOne, 'L'],
+  ['sl-crl', 'cropL',      0.01, fPct, 'L'],
+  ['sl-crr', 'cropR',      0.01, fPct, 'L'],
+  ['sl-crt', 'cropT',      0.01, fPct, 'L'],
+  ['sl-crb', 'cropB',      0.01, fPct, 'L'],
+  ['sl-gsc', 'gScale',     0.01, fMul, 'L'],
+  ['sl-scs', 'scaleStart', 0.01, fMul, 'L'],
   ['sl-sce', 'scaleEnd',   0.01, fMul, 'L'],
+  ['sl-edi', 'emitDist',   0.1,  fOne, 'L'],
+  ['sl-eac', 'emitAccel',  0.01, fSgn, 'L'],
+  ['sl-esp', 'emitSpread', 0.1,  fOne, 'L'],
+  ['sl-esr', 'emitSpiral', 1,    fTwo, 'L'],
+  ['sl-etw', 'emitTwist',  1,    fDeg, 'L'],
+  ['sl-eri', 'emitRise',   0.1,  fOne, 'L'],
+  ['sl-efo', 'emitFade',   0.01, fPct, ''],
   ['sl-swp', 'sweep',      1,    fDeg, 'L'],
   ['sl-gap', 'gap',        0.01, fTwo, 'L'],
   ['sl-lif', 'lift',       0.1,  fOne, 'L'],
@@ -577,6 +654,7 @@ var SLIDERS = [
   ['sl-dim', 'dim',        0.01, fPct, ''],
   ['sl-hgl', 'hiGlow',     0.01, fPct, ''],
   ['sl-hol', 'hiOutline',  0.01, fPct, ''],
+  ['sl-hsa', 'hiSat',      0.01, fPct, ''],
   ['sl-cam', 'camAmt',     0.01, fPct, ''],
   ['sl-ccy', 'camCycles',  1,    fInt, ''],
   ['sl-fov', 'fov',        1,    fDeg, 'F'],
@@ -584,13 +662,18 @@ var SLIDERS = [
   ['sl-bga', 'bgAngle',    1,    fDeg, ''],
   ['sl-bgs', 'bgScale',    0.01, fMul, '']
 ];
-var LAYOUT_KEYS = { layout:1, depth:1, twist:1, driftX:1, driftY:1, scaleEnd:1, edge:1, sweep:1,
-  gap:1, lift:1, radius:1, arc:1, rise:1, faceIn:1, reverse:1 };
+var LAYOUT_KEYS = { layout:1, depth:1, twist:1, driftX:1, driftY:1, scaleEnd:1, scaleStart:1, gScale:1, edge:1, sweep:1,
+  gap:1, lift:1, radius:1, arc:1, rise:1, faceIn:1, reverse:1, cropL:1, cropR:1, cropT:1, cropB:1,
+  emitSrc:1, emitDist:1, emitAccel:1, emitSpread:1, emitSpiral:1, emitTwist:1, emitRise:1 };
 
 var PRESETS = {
-  deep:     { layout:0, depth:7, twist:0, driftX:0, driftY:0, scaleEnd:1 },
-  tunnel:   { layout:0, depth:6, twist:180, driftX:0, driftY:0, scaleEnd:0.35 },
-  cascade:  { layout:0, depth:3, twist:0, driftX:2.5, driftY:-1.2, scaleEnd:1 },
+  stream:   { layout:3, emitSrc:0, emitDist:6, emitAccel:0, emitSpread:0, emitSpiral:1, emitTwist:0, emitRise:0, emitFade:0.35, scaleStart:1, scaleEnd:1 },
+  vortex:   { layout:3, emitSrc:0, emitDist:8, emitAccel:0.4, emitSpread:2.5, emitSpiral:1.5, emitTwist:270, emitRise:0, emitFade:0.5, scaleStart:1, scaleEnd:0.6 },
+  bloom:    { layout:3, emitSrc:2, emitDist:4, emitAccel:-0.5, emitSpread:3.5, emitSpiral:0.25, emitTwist:0, emitRise:0, emitFade:0.6, scaleStart:1, scaleEnd:1.6 },
+  echo:     { layout:3, emitSrc:1, emitDist:10, emitAccel:0.6, emitSpread:0, emitSpiral:0, emitTwist:0, emitRise:1.5, emitFade:0.3, scaleStart:1, scaleEnd:0.8 },
+  deep:     { layout:0, depth:7, twist:0, driftX:0, driftY:0, scaleStart:1, scaleEnd:1 },
+  tunnel:   { layout:0, depth:6, twist:180, driftX:0, driftY:0, scaleStart:1, scaleEnd:0.35 },
+  cascade:  { layout:0, depth:3, twist:0, driftX:2.5, driftY:-1.2, scaleStart:1, scaleEnd:1 },
   book:     { layout:1, edge:0, sweep:150, gap:0, lift:0 },
   rotor:    { layout:1, edge:2, sweep:360, gap:0.3, lift:0 },
   carousel: { layout:2, radius:3, arc:360, rise:0, faceIn:false },
@@ -719,6 +802,8 @@ var STACK_FRAG = [
 'uniform float uSoft;',
 'uniform float uInv;',
 'uniform float uSat;',
+'uniform float uHiSat;',       // saturation of the lit (scanned) frame
+'uniform vec4  uCrop;',        // x0, y0, x1, y1 in tile uv (y from top)
 'uniform float uBri;',
 'uniform float uOutline;',
 'uniform float uHiGlow;',
@@ -734,7 +819,8 @@ var STACK_FRAG = [
 '  float f = floor(vFrame + 0.5);',
 '  float col = mod(f, uGrid.x);',
 '  float row = floor(f / uGrid.x + 0.0001);',
-'  vec2 lt = clamp(vec2(vTile.x, 1.0 - vTile.y), uHalf, 1.0 - uHalf);',   // no tile bleed
+'  vec2 lt = mix(uCrop.xy, uCrop.zw, vec2(vTile.x, 1.0 - vTile.y));',   // crop window
+'  lt = clamp(lt, uHalf, 1.0 - uHalf);',                                // no tile bleed
 '  vec4 tex = texture2D(uAtlas, (vec2(col, row) + lt) / uGrid);',
 '  float l = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));',
 '  float m = smoothstep(uLo - uSoft, uLo + uSoft + 1e-4, l) * (1.0 - smoothstep(uHi - uSoft - 1e-4, uHi + uSoft, l));',
@@ -742,7 +828,8 @@ var STACK_FRAG = [
 '  m = mix(m, 1.0 - m, uInv);',
 '  m = mix(1.0, m, uMaskOn);',
 '  m = mix(m, 1.0, vHi * uHiBypass);',
-'  vec3 rgb = mix(vec3(l), tex.rgb, uSat) * uBri * (1.0 + uHiGlow * vHi * 1.5);',
+'  float sat = mix(uSat, uHiSat, clamp(vHi, 0.0, 1.0));',
+'  vec3 rgb = max(mix(vec3(l), tex.rgb, sat), 0.0) * uBri * (1.0 + uHiGlow * vHi * 1.5);',
 '  float a = clamp(vOp * m, 0.0, 1.0);',
 '  vec3 pr = rgb * a; float pa = a;',
    // edge distance in pixels (resolution independent outline)
@@ -824,6 +911,7 @@ function initThree() {
       uAtlas: {value: null}, uGrid: {value: new THREE.Vector2(1, 1)}, uHalf: {value: new THREE.Vector2(0.002, 0.002)},
       uAR: {value: 16 / 9}, uMaskOn: {value: 1}, uLo: {value: 0.12}, uHi: {value: 1}, uSoft: {value: 0.08},
       uInv: {value: 0}, uSat: {value: 1}, uBri: {value: 1}, uOutline: {value: 0.12},
+      uHiSat: {value: 1}, uCrop: {value: new THREE.Vector4(0, 0, 1, 1)},
       uHiGlow: {value: 0.2}, uHiOutline: {value: 0.7}, uHiBypass: {value: 1}, uHiColor: {value: new THREE.Vector3(0, 1, 1)},
       uPx: {value: 1.2}
     },
@@ -951,6 +1039,7 @@ function buildGeometry(n) {
   scene.add(stackMesh);
   baseCorners = new Float32Array(n * 12); baseCenter = new Float32Array(n * 3); baseNormal = new Float32Array(n * 3);
   hiArr = new Float32Array(n); opArr = new Float32Array(n);
+  ageArr = new Float32Array(n); entryArr = new Float32Array(n);
   sortKeys = new Float32Array(n); sortIdx = []; for (var i = 0; i < n; i++) sortIdx.push(i);
   layoutDirty = true;
 }
@@ -960,36 +1049,104 @@ function buildGeometry(n) {
    ════════════════════════════════════════════════════ */
 var _m = new THREE.Matrix4(), _r = new THREE.Matrix4(), _t = new THREE.Matrix4(), _s = new THREE.Matrix4();
 var _v = new THREE.Vector3(), _c = new THREE.Vector3();
+var _sc = new THREE.Matrix4();
+// Visible (cropped) frame size in world units. Cropping removes area rather than stretching.
+function cropW() { return Math.max(0.05, 1 - P.cropL - P.cropR); }
+function cropH() { return Math.max(0.05, 1 - P.cropT - P.cropB); }
+function frameW() { return frameAR * cropW() * P.gScale; }
+function frameH() { return cropH() * P.gScale; }
+function rampScale(s) { return P.scaleStart + (P.scaleEnd - P.scaleStart) * s; }
+
 function slotMatrix(k, n, out) {
-  var s = n > 1 ? k / (n - 1) : 0.5, c = s - 0.5, w = frameAR;
+  var s = n > 1 ? k / (n - 1) : 0.5, c = s - 0.5, w = frameW(), hgt = frameH();
+  var sc = rampScale(s);
+  _sc.makeScale(sc, sc, sc);
   if (P.layout === 0) {
     _t.makeTranslation(P.driftX * c, P.driftY * c, -P.depth * c);
     _r.makeRotationZ(P.twist * DEG * c);
-    var sc = 1 + (P.scaleEnd - 1) * s; _s.makeScale(sc, sc, sc);
-    out.multiplyMatrices(_t, _r).multiply(_s);
+    out.multiplyMatrices(_t, _r).multiply(_sc);
   } else if (P.layout === 1) {
     var th = P.sweep >= 359.5 ? (2 * Math.PI * k / n) : P.sweep * DEG * c;
     var e = P.edge, axisY = e < 2, g = P.gap;
-    if (e === 0) _s.makeTranslation(g + w / 2, 0, 0);
-    else if (e === 1) _s.makeTranslation(-(g + w / 2), 0, 0);
-    else if (e === 2) _s.makeTranslation(0, -(g + 0.5), 0);
-    else _s.makeTranslation(0, g + 0.5, 0);
+    // scale around the hinge edge so every frame stays attached to the spine
+    if (e === 0) _s.makeTranslation(g + w * sc / 2, 0, 0);
+    else if (e === 1) _s.makeTranslation(-(g + w * sc / 2), 0, 0);
+    else if (e === 2) _s.makeTranslation(0, -(g + hgt * sc / 2), 0);
+    else _s.makeTranslation(0, g + hgt * sc / 2, 0);
     if (axisY) _r.makeRotationY(e === 1 ? -th : th); else _r.makeRotationX(e === 3 ? -th : th);
     var l = P.lift * c;
     _t.makeTranslation(axisY ? 0 : l, axisY ? l : 0, 0);
-    out.multiplyMatrices(_t, _r).multiply(_s);
+    out.multiplyMatrices(_t, _r).multiply(_s).multiply(_sc);
   } else {
     var ph = P.arc >= 359.5 ? (2 * Math.PI * k / n) : P.arc * DEG * c;
     _t.makeTranslation(Math.sin(ph) * P.radius, P.rise * c, Math.cos(ph) * P.radius);
     _r.makeRotationY(ph + (P.faceIn ? Math.PI : 0));
-    out.multiplyMatrices(_t, _r);
+    out.multiplyMatrices(_t, _r).multiply(_sc);
   }
   return out;
 }
+
+/* ── Emit layout: positions follow the scan head every tick ─────────────────
+   Each frame gets an "age" a ∈ [0,1): 0 = front & centre (the scan frame),
+   1 = furthest back. Frames stream along a path driven by a. */
+var headPos = 0.5, headDir = 1, headCyc = true, headGlide = false;
+var ageArr = null, entryArr = null;
+function emitPath(a, side, out) {
+  var ae = Math.pow(a, Math.pow(2.5, P.emitAccel));           // Accel: >0 hangs near the front then rushes away
+  var sc = rampScale(a);
+  var ang = (P.emitSpiral * a + (side < 0 ? 0.5 : 0)) * 2 * Math.PI;   // Both: two arms
+  var r = P.emitSpread * a;
+  _t.makeTranslation(r * Math.cos(ang), r * Math.sin(ang) + P.emitRise * a, -P.emitDist * ae);
+  _r.makeRotationZ(P.emitTwist * DEG * a * (side < 0 ? -1 : 1));
+  _sc.makeScale(sc, sc, sc);
+  return out.multiplyMatrices(_t, _r).multiply(_sc);
+}
+function computeEmit() {
+  var w = frameW(), hgt = frameH(), LX = [-w / 2, w / 2, w / 2, -w / 2], LY = [-hgt / 2, -hgt / 2, hgt / 2, hgt / 2];
+  var src = headCyc ? P.emitSrc : 2;                          // ping-pong: always symmetric
+  for (var q = 0; q < N; q++) {
+    var i = q, a, side = 1, entry = 1, d;           // frame index = scan index, so the lit frame is always front
+    if (src === 2) {
+      d = (i + 0.5) - headPos;
+      if (headCyc) { if (d > N / 2) d -= N; else if (d < -N / 2) d += N; a = Math.abs(d) / (N / 2); }
+      else a = Math.abs(d) / Math.max(N - 1, 1);
+      side = d * headDir >= 0 ? 1 : -1;
+    } else {
+      var x;
+      if (headGlide) {
+        // the frame becomes the front one when the head crosses its leading edge (Past)
+        // or leaves its trailing edge (Upcoming); a half-frame fade hides the swap
+        var edge = (src === 0) === (headDir > 0) ? i : i + 1;
+        x = (src === 0 ? headPos - edge : edge - headPos) * headDir;
+      } else x = (src === 0 ? headPos - (i + 0.5) : (i + 0.5) - headPos) * headDir;
+      x = ((x % N) + N) % N;
+      a = x / N;
+      if (headGlide) entry = smooth01(x / 0.5);
+    }
+    a = clamp(a, 0, 0.9999);
+    ageArr[q] = a; entryArr[q] = entry;
+    emitPath(a, side, _m);
+    for (var c = 0; c < 4; c++) {
+      _v.set(LX[c], LY[c], 0).applyMatrix4(_m);
+      baseCorners[q * 12 + c * 3] = _v.x; baseCorners[q * 12 + c * 3 + 1] = _v.y; baseCorners[q * 12 + c * 3 + 2] = _v.z;
+    }
+    baseCenter[q * 3] = _m.elements[12]; baseCenter[q * 3 + 1] = _m.elements[13]; baseCenter[q * 3 + 2] = _m.elements[14];
+    _v.set(_m.elements[8], _m.elements[9], _m.elements[10]).normalize();
+    baseNormal[q * 3] = _v.x; baseNormal[q * 3 + 1] = _v.y; baseNormal[q * 3 + 2] = _v.z;
+  }
+}
+function smooth01(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); }
+
 function rebuildLayout() {
   layoutDirty = false;
   if (!N) return;
-  var w = frameAR, LX = [-w / 2, w / 2, w / 2, -w / 2], LY = [-0.5, -0.5, 0.5, 0.5];
+  if (P.layout === 3) {                       // dynamic: only bounds here, geometry per tick
+    var hd = 0.5 * Math.hypot(frameW(), frameH()) * Math.max(P.scaleStart, P.scaleEnd);
+    layoutRadius = Math.max(hd + P.emitSpread * 0.6 + Math.abs(P.emitRise) * 0.5, P.emitDist * 0.42, 0.5);
+    layoutSpan.set(0, P.emitRise, -P.emitDist);
+    return;
+  }
+  var w = frameW(), hgt = frameH(), LX = [-w / 2, w / 2, w / 2, -w / 2], LY = [-hgt / 2, -hgt / 2, hgt / 2, hgt / 2];
   var cx = 0, cy = 0, cz = 0;
   for (var q = 0; q < N; q++) {
     var k = P.reverse ? N - 1 - q : q;
@@ -1022,7 +1179,10 @@ function rebuildLayout() {
 
 function fitCamera(resetAngles) {
   if (layoutDirty) rebuildLayout();
-  if (resetAngles) { orbit.yaw = -0.55; orbit.pitch = 0.22; }
+  if (resetAngles) {
+    if (P.layout === 3) { orbit.yaw = -0.38; orbit.pitch = 0.16; }   // mostly frontal: scan frame reads centre
+    else { orbit.yaw = -0.55; orbit.pitch = 0.22; }
+  }
   var vf = P.fov * DEG, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect);
   orbit.dist = clamp(layoutRadius / Math.sin(Math.min(vf, hf) / 2) * 1.02, 1, 200);
 }
@@ -1032,12 +1192,18 @@ function fitCamera(resetAngles) {
    ════════════════════════════════════════════════════ */
 function computeScan(phase) {
   var i;
-  if (!P.scanOn || !N) { for (i = 0; i < N; i++) hiArr[i] = 0; return; }
+  if (!N) return;
   var raw = frac(phase * P.scanCycles), p = raw, sign = 1, cyclic = true, d, h;
-  if (!P.scanStep) { computeGlide(raw); return; }
+  if (!P.scanStep) {
+    computeGlide(raw);                            // also sets the head for Emit
+    if (!P.scanOn) for (i = 0; i < N; i++) hiArr[i] = 0;
+    return;
+  }
   if (P.scanDir === 1) { p = 1 - raw; sign = -1; }
   else if (P.scanDir === 2) { p = raw < 0.5 ? raw * 2 : 2 - raw * 2; sign = raw < 0.5 ? 1 : -1; cyclic = false; }
   var pos = Math.floor(Math.min(p * N, N - 1e-6)) + 0.5;
+  headPos = pos; headDir = sign; headCyc = cyclic; headGlide = false;
+  if (!P.scanOn) { for (i = 0; i < N; i++) hiArr[i] = 0; return; }
   var W = P.scanWidth + 0.5;
   for (i = 0; i < N; i++) {
     d = (i + 0.5) - pos;
@@ -1064,6 +1230,8 @@ function computeGlide(raw) {
     pos = (P.scanDir === 1 ? 1 - raw : raw) * N;  // wraps last → first through the cyclic distance
     vel = P.scanDir === 1 ? -1 : 1;
   }
+  headPos = pos; headDir = vel >= 0 ? 1 : -1; headCyc = cyclic; headGlide = true;
+  if (!P.scanOn) return;
   // Lead/Trail bias follows velocity, so ping-pong swaps the tail side smoothly
   var bias = P.glideBias * clamp(vel, -1, 1);
   for (i = 0; i < N; i++) {
@@ -1126,8 +1294,16 @@ function computeOpacity() {
     var o = P.opacity;
     if (P.fadeHead > 0) o *= clamp(s / P.fadeHead, 0, 1);
     if (P.fadeTail > 0) o *= clamp((1 - s) / P.fadeTail, 0, 1);
+    var ef = 1;
+    if (P.layout === 3) {
+      // dissolve into the distance + hide the front/back swap in Glide; the highlight
+      // (outline, glow, pop) fades with it so far-back frames never show a lit outline
+      ef = (P.emitFade > 0 ? smooth01((1 - ageArr[q]) / P.emitFade) : 1) * entryArr[q];
+      hiArr[q] *= ef;
+    }
     var h = hiArr[q];
     if (P.scanOn) { o *= 1 - P.dim * (1 - h); o = o + (1 - o) * h; }   // lit frame → 100%
+    o *= ef;
     if (q >= loaded) o = 0;
     opArr[q] = o;
   }
@@ -1136,14 +1312,30 @@ function computeOpacity() {
 var _tgt = new THREE.Vector3();
 function applyCamera(phase) {
   var A = P.camAmt, w = 2 * Math.PI * P.camCycles * phase;
-  var yaw = orbit.yaw, pitch = orbit.pitch, dist = orbit.dist;
+  var yaw = orbit.yaw, pitch = orbit.pitch, dist = orbit.dist, roll = 0, s1 = Math.sin(w), off;
+  var R = layoutRadius;
   _tgt.set(0, 0, 0);
+  // Every move uses whole-number harmonics of w, so each one closes exactly on the loop.
   switch (P.camMode) {
-    case 1: yaw += w; pitch += A * 0.35 * Math.sin(w); break;
-    case 2: yaw += A * 1.2 * Math.sin(w); break;
-    case 3: yaw += A * 1.0 * Math.sin(w); pitch += A * 0.45 * Math.sin(2 * w); break;
-    case 4: dist *= 1 - A * 0.5 * Math.sin(w); break;
-    case 5: _tgt.copy(layoutSpan).multiplyScalar(A * 0.5 * Math.sin(w)); break;
+    case 1: yaw += w; pitch += A * 0.35 * s1; break;                                 // Orbit
+    case 2: yaw += A * 1.2 * s1; break;                                              // Sway
+    case 3: yaw += A * 1.0 * s1; pitch += A * 0.45 * Math.sin(2 * w); break;         // Arc
+    case 4: dist *= 1 - A * 0.5 * s1; break;                                         // Dolly
+    case 5: _tgt.copy(layoutSpan).multiplyScalar(A * 0.5 * s1); break;               // Drift
+    case 6:                                                                          // Float: slow lissajous
+      yaw += A * 0.22 * s1; pitch += A * 0.11 * Math.sin(2 * w + 0.9);
+      _tgt.y += A * R * 0.03 * Math.sin(w + 1.7); break;
+    case 7:                                                                          // Breathe: gentle push-in
+      dist *= 1 - A * 0.14 * (0.5 - 0.5 * Math.cos(w)); pitch += A * 0.035 * s1; break;
+    case 8:                                                                          // Handheld: layered tremor
+      yaw   += A * 0.05  * (0.55 * Math.sin(w + 0.3) + 0.3 * Math.sin(3 * w + 1.9) + 0.15 * Math.sin(7 * w + 4.1));
+      pitch += A * 0.035 * (0.55 * Math.sin(2 * w + 2.2) + 0.3 * Math.sin(5 * w + 0.6) + 0.15 * Math.sin(9 * w + 3.3));
+      roll  += A * 0.02  * (0.6 * Math.sin(w + 5.1) + 0.4 * Math.sin(4 * w + 1.2)); break;
+    case 9: roll = A * 0.13 * s1; yaw += A * 0.06 * Math.sin(w + 1.57); break;       // Tilt: dutch-angle rock
+    case 10:                                                                         // Truck: lateral parallax slide
+      off = A * R * 0.35 * s1;
+      _tgt.x += Math.cos(yaw) * off; _tgt.z -= Math.sin(yaw) * off; break;
+    case 11: _tgt.y += A * R * 0.3 * s1; pitch -= A * 0.12 * s1; break;              // Crane: rise & tilt down
   }
   pitch = clamp(pitch, -1.5, 1.5);
   camera.position.set(
@@ -1151,6 +1343,7 @@ function applyCamera(phase) {
     _tgt.y + dist * Math.sin(pitch),
     _tgt.z + dist * Math.cos(pitch) * Math.cos(yaw));
   camera.lookAt(_tgt);
+  if (roll) camera.rotateZ(roll);
   camera.updateMatrixWorld();
 }
 
@@ -1159,6 +1352,7 @@ function updateScene(t) {
   if (layoutDirty) rebuildLayout();
   var phase = frac(t / P.loopSec);
   computeScan(phase);
+  if (P.layout === 3) computeEmit();          // emit geometry follows the scan head
   computeOpacity();
   applyCamera(phase);
 
@@ -1194,6 +1388,9 @@ function syncUniforms(pxHeight, exporting) {
   u.uMaskOn.value = P.maskOn ? 1 : 0; u.uLo.value = P.maskLo; u.uHi.value = P.maskHi;
   u.uSoft.value = P.maskSoft; u.uInv.value = P.maskInv ? 1 : 0;
   u.uSat.value = P.sat; u.uBri.value = P.bri; u.uOutline.value = P.outline;
+  u.uHiSat.value = P.hiSat;
+  u.uCrop.value.set(P.cropL, P.cropT, 1 - P.cropR, 1 - P.cropB);
+  u.uAR.value = frameAR * cropW() / cropH();          // outline uses the cropped aspect
   u.uHiGlow.value = P.hiGlow; u.uHiOutline.value = P.hiOutline; u.uHiBypass.value = P.hiBypass ? 1 : 0;
   hexToVec3(P.hiColor, u.uHiColor.value);
   u.uPx.value = Math.max(0.75, pxHeight / 900);       // same visual line weight at any render size
@@ -1759,7 +1956,7 @@ function onParamChanged(key, kind) {
   }
   if (key === 'quality') { clipDirty = true; updateClipUI(); }
   if (kind === 'F' || key === 'fov') { camera.fov = P.fov; camera.updateProjectionMatrix(); }
-  if (key === 'layout') { showLayoutBlocks(); }
+  if (key === 'layout') { showLayoutBlocks(); fitCamera(true); }
   if (key === 'scanStep') showScanBlocks();
   if (kind === 'G' || key === 'glideCurve') drawCurve();
   if (key === 'blend') applyBlend();
@@ -1823,12 +2020,16 @@ function bindControls() {
       var p = PRESETS[btn.dataset.p]; if (!p) return;
       document.querySelectorAll('.pbtn').forEach(function(b) { b.classList.remove('sel'); });
       btn.classList.add('sel');
+      var wasEmit = P.layout === 3;
       for (var k in p) P[k] = p[k];
-      layoutDirty = true; syncControls(); fitCamera(false);
+      layoutDirty = true; syncControls(); fitCamera((P.layout === 3) !== wasEmit);
     });
   });
   document.getElementById('btn-extract').addEventListener('click', extractFrames);
   document.getElementById('btn-fit').addEventListener('click', function() { fitCamera(true); });
+  document.getElementById('btn-crop-reset').addEventListener('click', function() {
+    P.cropL = P.cropR = P.cropT = P.cropB = 0; layoutDirty = true; syncControls();
+  });
 }
 
 function showUI() {
