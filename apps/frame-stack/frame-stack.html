@@ -353,9 +353,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
         <input type="range" id="sl-ftl" min="0" max="100" value="0" step="1"><span class="val" id="vl-ftl"></span></div>
       <div class="sec">Blend</div>
       <div class="seg" data-key="blend">
-        <button class="seg-btn active" data-v="0">Normal</button>
+        <button class="seg-btn" data-v="0">Normal</button>
         <button class="seg-btn" data-v="1">Add</button>
-        <button class="seg-btn" data-v="2">Screen</button>
+        <button class="seg-btn active" data-v="2">Screen</button>
       </div>
       <div class="divider"></div>
       <div class="sec">Luma Mask</div>
@@ -376,7 +376,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
       <div class="row"><span class="lbl">Brightness</span>
         <input type="range" id="sl-bri" min="20" max="300" value="100" step="1"><span class="val" id="vl-bri"></span></div>
       <div class="row"><span class="lbl">Outline</span>
-        <input type="range" id="sl-oln" min="0" max="100" value="12" step="1"><span class="val" id="vl-oln"></span></div>
+        <input type="range" id="sl-oln" min="0" max="100" value="0" step="1"><span class="val" id="vl-oln"></span></div>
     </div>
 
     <!-- ── Scan ─────────────────────────────────── -->
@@ -429,7 +429,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-ra
       <div class="row"><span class="lbl">Glow</span>
         <input type="range" id="sl-hgl" min="0" max="100" value="20" step="1"><span class="val" id="vl-hgl"></span></div>
       <div class="row"><span class="lbl">Outline</span>
-        <input type="range" id="sl-hol" min="0" max="100" value="70" step="1"><span class="val" id="vl-hol"></span></div>
+        <input type="range" id="sl-hol" min="0" max="100" value="0" step="1"><span class="val" id="vl-hol"></span></div>
       <div class="row"><span class="lbl">Saturation</span>
         <input type="range" id="sl-hsa" min="0" max="200" value="100" step="1"><span class="val" id="vl-hsa"></span></div>
       <div class="info">Saturation of the lit frame only — the rest use Frames ▸ Saturation. Blends along the Glide curve.</div>
@@ -585,13 +585,13 @@ var P = {
   edge: 0, sweep: 140, gap: 0, lift: 0,
   radius: 2.5, arc: 360, rise: 0, faceIn: false, reverse: false,
   // frames
-  opacity: 0.55, fadeHead: 0, fadeTail: 0, blend: 0,
+  opacity: 0.55, fadeHead: 0, fadeTail: 0, blend: 2,
   maskOn: true, maskLo: 0.12, maskHi: 1, maskSoft: 0.08, maskInv: false,
-  sat: 1, bri: 1, outline: 0.12,
+  sat: 1, bri: 1, outline: 0,
   // scan
   scanOn: true, scanStep: 1, scanDir: 0, scanCycles: 1, scanWidth: 0, scanTrail: false,
   glideCurve: 1, glideW: 3, glideShape: 0, glideHold: 0, glideBias: 0,
-  pop: 0.15, dim: 0.3, hiGlow: 0.2, hiOutline: 0.7, hiColor: '#00f5ff', hiBypass: true, hiSat: 1,
+  pop: 0.15, dim: 0.3, hiGlow: 0.2, hiOutline: 0, hiColor: '#00f5ff', hiBypass: true, hiSat: 1,
   // camera
   camMode: 2, camAmt: 0.35, camCycles: 1, fov: 35,
   // scene
@@ -910,9 +910,9 @@ function initThree() {
     uniforms: {
       uAtlas: {value: null}, uGrid: {value: new THREE.Vector2(1, 1)}, uHalf: {value: new THREE.Vector2(0.002, 0.002)},
       uAR: {value: 16 / 9}, uMaskOn: {value: 1}, uLo: {value: 0.12}, uHi: {value: 1}, uSoft: {value: 0.08},
-      uInv: {value: 0}, uSat: {value: 1}, uBri: {value: 1}, uOutline: {value: 0.12},
+      uInv: {value: 0}, uSat: {value: 1}, uBri: {value: 1}, uOutline: {value: 0},
       uHiSat: {value: 1}, uCrop: {value: new THREE.Vector4(0, 0, 1, 1)},
-      uHiGlow: {value: 0.2}, uHiOutline: {value: 0.7}, uHiBypass: {value: 1}, uHiColor: {value: new THREE.Vector3(0, 1, 1)},
+      uHiGlow: {value: 0.2}, uHiOutline: {value: 0}, uHiBypass: {value: 1}, uHiColor: {value: new THREE.Vector3(0, 1, 1)},
       uPx: {value: 1.2}
     },
     side: THREE.DoubleSide, transparent: true, depthTest: false, depthWrite: false,
